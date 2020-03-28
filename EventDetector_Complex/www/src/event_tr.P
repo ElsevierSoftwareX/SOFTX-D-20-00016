@@ -1,0 +1,788 @@
+% Event processing with Transaction Logic
+:- dynamic(logging/1).
+:- assert(logging(off)).
+%:- assert(logging(on)).
+:- dynamic(time_cpu/1).
+:- assert(time_cpu(0)).
+
+%?- compile_events('examples/event_test_01.event').
+% Parses the "event_test_01.event" file
+% Binarization (and also saves a file "event_test_01.event.bin" if the flag "logging(on)" is set)
+% Transformation to CTR (and also saves a file "event_test_01.event.ctr" if the flag "logging(on)" is set)
+compile_events(InputFile):-
+	open(InputFile,read,InputHandle),
+	repeat_read(InputHandle,EventRules),
+	binarization(EventRules,BinaryEventRules), loggingBinaryFile(InputFile,BinaryEventRules),
+	event2tr_transformation(BinaryEventRules,TRRules),loggingTRFile(InputFile,TRRules),
+	assert_trRules(TRRules),
+	close(InputHandle),
+	!.
+
+assert_trRules([]).
+assert_trRules([H|T]):-
+	assert(trRules(H)),
+	assert_trRules(T).
+
+% repeat_read(+InputHandle,-EventRules)
+repeat_read(InputHandle,EventRules):-
+	read(InputHandle,Term),
+	Term \= end_of_file,
+	parseEventRule(Term,EventRule),
+	repeat_read(InputHandle,RestEventRules),
+	conc1(EventRule,RestEventRules,EventRules),
+	!.
+repeat_read(_InputHandle,[]).
+
+:- op(600, fx, 'o'). % isolation
+:- op(600, xf, '^*'). % another implementation of *times
+:- op(601,xfy, 'cnot'). %negation
+:- op(602, xf, '>?'). % *times
+:- op(605, xfy, '*'). % sequential conjunction
+:- op(608, xfy, '\\/'). % disjunction
+:- op(610, xfy, '#'). % parallel conjunction
+:- op(610, xfy, '/\\'). % classical conjunction
+:- op(625, xfy,'^'). %Ntimes
+
+% parseEventRule(+Term,-EventRule)
+parseEventRule((Lhs :- Rhs),EventRule):-
+	Rhs =.. L, parseEventFormula(L,F_temp),
+	%left2rightAssoc([],F_temp,F),
+	F = F_temp,
+	EventRule = eventClause(Lhs,F),
+	!.
+parseEventRule(db(Fact),nil):-
+	assert(bkEdb(Fact)),
+	!.
+
+conc1(EventRule,RestEventRules,EventRules):-
+	EventRule = nil,
+	!,
+	EventRules = RestEventRules.
+conc1(EventRule,RestEventRules,EventRules):-
+	!,
+	EventRules = [EventRule|RestEventRules].
+
+op('*',seq).
+op('/\\',cand).
+op('#',conc).
+op('\\/',or).
+op('o',iso).
+op('cnot',cnot).
+op('^',ntime).
+op('>?',times).
+op('^*',star_times).
+
+% parseEventFormula(+List,-EventFormula)
+% ntimes operator is transformed into N sequences
+parseEventFormula([Op,I1,I2],EventFormula):-
+	op(Op,OpString),
+	I1 =.. LI1, parseEventFormula(LI1,I1EventFormula),
+	I2 =.. LI2, parseEventFormula(LI2,I2EventFormula),
+   	EventFormula =.. [OpString,I1EventFormula,I2EventFormula],
+   	!.
+parseEventFormula([Op,I],EventFormula):- % unary operation
+	op(Op,OpString),
+	I =.. LI,parseEventFormula(LI,IEventFormula),
+   	EventFormula =.. [OpString,IEventFormula],
+   	!.
+parseEventFormula([A],EventFormula):-
+	atomic(A),
+	EventFormula = A,
+	!.
+parseEventFormula(List,EventFormula):-
+	Literal =.. List,
+	EventFormula = Literal,
+	!.
+
+% binarization(+EventRules,-BinaryEventRules)
+binarization(EventRules,BinaryEventRules):-
+	binarization(EventRules,[],BinaryEventRules).
+
+%binarization(+EventRules,+PredBinaryEventRules,-BinaryEventRules)
+binarization([eventClause(Head,Body)|RestEventRules],PredBinaryEventRules,BinaryEventRules):-
+	Body =.. [Op,I1,I2],
+	op(_OpString,Op), % check if Op is a valid operator and not a Prolog standard predicate (such as, not/1, is, number/1, atom/1, ...)
+	binarizationFormula(I1,PredBinaryEventRules,NewI1,B1),
+	binarizationFormula(I2,B1,NewI2,B2),
+	NewBody =.. [Op,NewI1,NewI2],
+	binarization(RestEventRules,[eventClause(Head,NewBody)|B2],BinaryEventRules),
+	!.
+binarization([eventClause(Head,Body)|RestEventRules],PredBinaryEventRules,BinaryEventRules):-
+	Body =.. [Op,I],
+	op(_OpString,Op), % check if Op is a valid operator and not a Prolog standard predicate (such as, not/1, is, number/1, atom/1, ...)
+	Op \= star_times,
+	binarizationFormula(I,PredBinaryEventRules,NewI,B),
+	NewBody =.. [Op,NewI],
+	binarization(RestEventRules,[eventClause(Head,NewBody)|B],BinaryEventRules),
+	!.
+binarization([eventClause(Head,Body)|RestEventRules],PredBinaryEventRules,BinaryEventRules):-
+	binarization(RestEventRules,[eventClause(Head,Body)|PredBinaryEventRules],BinaryEventRules),
+	!.
+binarization([],BinaryEventRules,BinaryEventRules).
+
+% binarizationFormula(+Body,+PredBinaryEventRules,-NewBody,-ReturnBinaryEventRules)
+binarizationFormula(Body,PredBinaryEventRules,NewBody,ReturnBinaryEventRules):-
+	Body =.. [Op,I1,I2],
+	op(_OpString,Op), % check if Op is a valid operator and not a Prolog standard predicate (such as, not/1, is, number/1, atom/1, ...)
+	binarizationFormula(I1,PredBinaryEventRules,NewI1,B1),
+	binarizationFormula(I2,B1,NewI2,B2),
+	incCounter(binarizationCounter), counter(binarizationCounter,Counter),
+	number_codes(Counter,CounterList),atom_codes(NewEventPred,[116,101,109,112,95,101,95|CounterList]), NewEvent =.. [NewEventPred,NewI1,NewI2],
+	EventBody =.. [Op,NewI1,NewI2],
+	NewBody = NewEvent,
+	ReturnBinaryEventRules = [eventClause(NewEvent,EventBody)|B2],
+	!.
+binarizationFormula(Body,PredBinaryEventRules,NewBody,ReturnBinaryEventRules):-
+	Body =.. [Op,I],
+	op(_OpString,Op), % check if Op is a valid operator and not a Prolog standard predicate (such as, not/1, is, number/1, atom/1, ...)
+	Op \= star_times,
+	binarizationFormula(I,PredBinaryEventRules,NewI,B),
+	incCounter(binarizationCounter), counter(binarizationCounter,Counter), 
+	number_codes(Counter,CounterList),atom_codes(NewEventPred,[116,101,109,112,95,101,95|CounterList]), NewEvent =.. [NewEventPred,NewI],
+	EventBody =.. [Op,NewI],
+	NewBody = NewEvent,
+	ReturnBinaryEventRules = [eventClause(NewEvent,EventBody)|B],
+	!.
+binarizationFormula(Body,PredBinaryEventRules,NewBody,ReturnBinaryEventRules):-
+	NewBody = Body,
+	ReturnBinaryEventRules = PredBinaryEventRules,
+	!.
+
+% loggingBinaryFile(+InputFile,+BinaryEventRules)
+loggingBinaryFile(InputFile,BinaryEventRules):-
+	logging(on),
+	atom_concat(InputFile,'.bin',BinaryFile),
+	open(BinaryFile,write,BinaryFileHandle),
+	writeBinaryFile(BinaryFileHandle,BinaryEventRules),
+	close(BinaryFileHandle),
+	!.
+loggingBinaryFile(_InputFile,_BinaryEventRules).
+% writeBinaryFile(+BinaryFileHandle,+BinaryEventRules)
+writeBinaryFile(BinaryFileHandle,[H|T]):-
+	write(BinaryFileHandle,H),write(BinaryFileHandle,'.\n'),
+	writeBinaryFile(BinaryFileHandle,T),
+	!.
+writeBinaryFile(_BinaryFileHandle,[]).
+
+% event2tr_transformation(+BinaryEventRules,-TRRules)
+% *times implementation
+event2tr_transformation([eventClause(Head,seq(I1,star_times(I2)))|T],TRRules):-
+	FirstClause = trClause(event(I1,[T1,T2]),
+		seq(ins(star_goal(event(I1,[T1,T2]),event(Head))), event(Head,[T1,T2]))),
+	SecondClause = trClause(event(I2,[_T3,T4]),
+		seq(db(star_goal(event(I1,[T1,T2]),event(Head))),
+			seq( del(star_goal(event(I1,[T1,T2]),event(Head))),
+				seq( ins(star_goal(event(I1,[T1,T4]),event(Head))),
+				event(Head,[T1,T4])
+		)))),
+	event2tr_transformation(T,RestTRRules),
+	TRRules =[FirstClause,SecondClause|RestTRRules],
+	!.
+% aggregate implementation
+%   counter
+event2tr_transformation([eventClause(Head,seq(I1,aggregate(count,I2^*,Counter)))|T],TRRules):-
+	FirstClause = trClause(event(I1,[T1,T2]),
+		seq(ins(aggregate_goal(event(I1,[T1,T2]),count,0)), seq(prolog(is(Counter,0)),event(Head,[T1,T2])))),
+	SecondClause = trClause(event(I2,[_T3,T4]),
+		seq(db(aggregate_goal(event(I1,[T1,T2]),count,Counter2)),
+			seq( del(aggregate_goal(event(I1,[T1,T2]),count,Counter2)),
+				seq( prolog(is(Counter1,Counter2+1)),
+					seq( ins(aggregate_goal(event(I1,[T1,T2]),count,Counter1)),
+						seq(prolog(is(Counter,Counter1)),
+						event(Head,[T1,T4])
+		)))))),
+	event2tr_transformation(T,RestTRRules),
+	TRRules =[FirstClause,SecondClause|RestTRRules],
+	!.
+%   sum
+event2tr_transformation([eventClause(Head,seq(I1,aggregate(sum(X),I2^*,Sum)))|T],TRRules):-
+	FirstClause = trClause(event(I1,[T1,T2]),
+		seq(ins(aggregate_goal(event(I1,[T1,T2]),sum,0)), seq(prolog(is(Sum,0)),event(Head,[T1,T2])))),
+	SecondClause = trClause(event(I2,[_T3,T4]),
+		seq(db(aggregate_goal(event(I1,[T1,T2]),sum,Sum2)),
+			seq( del(aggregate_goal(event(I1,[T1,T2]),sum,Sum2)),
+				seq( prolog(is(Sum1,Sum2+X)),
+					seq( ins(aggregate_goal(event(I1,[T1,T2]),sum,Sum1)),
+						seq(prolog(is(Sum,Sum1)),
+						event(Head,[T1,T4])
+		)))))),
+	event2tr_transformation(T,RestTRRules),
+	TRRules =[FirstClause,SecondClause|RestTRRules],
+	!.
+%   min
+event2tr_transformation([eventClause(Head,seq(I1,aggregate(min(X),I2^*,Min)))|T],TRRules):-
+	FirstClause = trClause(event(I1,[T1,T2]),
+		seq(ins(aggregate_goal(event(I1,[T1,T2]),min,100000)), seq(prolog(is(Min,100000)),event(Head,[T1,T2])))),
+	SecondClause = trClause(event(I2,[_T3,T4]),
+		seq(db(aggregate_goal(event(I1,[T1,T2]),min,Min2)),
+			seq( del(aggregate_goal(event(I1,[T1,T2]),min,Min2)),
+				seq( min(Min2,X,Min1),
+					seq( ins(aggregate_goal(event(I1,[T1,T2]),min,Min1)),
+						seq(prolog(is(Min,Min1)),
+						event(Head,[T1,T4])
+		)))))),
+	event2tr_transformation(T,RestTRRules),
+	TRRules =[FirstClause,SecondClause|RestTRRules],
+	!.
+%   max
+event2tr_transformation([eventClause(Head,seq(I1,aggregate(max(X),I2^*,Max)))|T],TRRules):-
+	FirstClause = trClause(event(I1,[T1,T2]),
+		seq(ins(aggregate_goal(event(I1,[T1,T2]),max,0)), seq(prolog(is(Max,0)),event(Head,[T1,T2])))),
+	SecondClause = trClause(event(I2,[_T3,T4]),
+		seq(db(aggregate_goal(event(I1,[T1,T2]),max,Max2)),
+			seq( del(aggregate_goal(event(I1,[T1,T2]),max,Max2)),
+				seq( max(Max2,X,Max1),
+					seq( ins(aggregate_goal(event(I1,[T1,T2]),max,Max1)),
+						seq(prolog(is(Max,Max1)),
+						event(Head,[T1,T4])
+		)))))),
+	event2tr_transformation(T,RestTRRules),
+	TRRules =[FirstClause,SecondClause|RestTRRules],
+	!.
+
+% sequence with prolog calls
+event2tr_transformation([eventClause(Head,seq(I1,prolog(I2)))|T],TRRules):-
+	FirstClause = trClause(event(I1,[T1,T2]),
+		seq(prolog(I2),event(Head,[T1,T2]))),
+	event2tr_transformation(T,RestTRRules),
+	TRRules =[FirstClause|RestTRRules],
+	!.
+event2tr_transformation([eventClause(Head,seq(prolog(I1),I2))|T],TRRules):-
+	FirstClause = trClause(event(I2,[T1,T2]),
+		seq(prolog(I1),event(Head,[T1,T2]))),
+	event2tr_transformation(T,RestTRRules),
+	TRRules =[FirstClause|RestTRRules],
+	!.
+% sequence with query calls
+event2tr_transformation([eventClause(Head,seq(I1,query(I2)))|T],TRRules):-
+	FirstClause = trClause(event(I1,[T1,T2]),
+		seq(query(I2),event(Head,[T1,T2]))),
+	event2tr_transformation(T,RestTRRules),
+	TRRules =[FirstClause|RestTRRules],
+	!.
+event2tr_transformation([eventClause(Head,seq(query(I1),I2))|T],TRRules):-
+	FirstClause = trClause(event(I2,[T1,T2]),
+		seq(query(I1),event(Head,[T1,T2]))),
+	event2tr_transformation(T,RestTRRules),
+	TRRules =[FirstClause|RestTRRules],
+	!.
+% sequence with db calls
+event2tr_transformation([eventClause(Head,seq(I1,db(I2)))|T],TRRules):-
+	FirstClause = trClause(event(I1,[T1,T2]),
+		seq(db(I2),event(Head,[T1,T2]))),
+	event2tr_transformation(T,RestTRRules),
+	TRRules =[FirstClause|RestTRRules],
+	!.
+event2tr_transformation([eventClause(Head,seq(db(I1),I2))|T],TRRules):-
+	FirstClause = trClause(event(I2,[T1,T2]),
+		seq(db(I1),event(Head,[T1,T2]))),
+	event2tr_transformation(T,RestTRRules),
+	TRRules =[FirstClause|RestTRRules],
+	!.
+% sequence
+:- dynamic(out_of_order/1).
+:- dynamic(garbage_clt/1).
+:- assert(out_of_order(on)).
+%:- assert(out_of_order(off)).
+%:- assert(garbage_clt(on)).
+:- assert(garbage_clt(off)).
+
+enable_order :- retractall(out_of_order(_)), assert(out_of_order(on)).
+disable_order :- retractall(out_of_order(_)), assert(out_of_order(off)).
+
+enable_garbage :- retractall(garbage_clt(_)), assert(garbage_clt(on)).
+disable_garbage :- retractall(garbage_clt(_)), assert(garbage_clt(off)).
+
+
+event2tr_transformation([eventClause(Head,seq(I1,I2))|T],TRRules):-
+	out_of_order(off),
+	FirstClause = trClause(event(I1,[T1,T2]),ins(goal(event(I2),event(I1,[T1,T2]),event(Head)))),
+	SecondClause = trClause(event(I2,[T3,T4]),
+		seq(db(goal(event(I2),event(I1,[T1,T2]),event(Head))), 
+			seq(del(goal(event(I2),event(I1,[T1,T2]),event(Head))),
+				seq(less(T2,T3),event(Head,[T1,T4]))))),
+	event2tr_transformation(T,RestTRRules),
+	TRRules =[FirstClause,SecondClause|RestTRRules],
+	!.
+% out_of_order with garbage collector	
+event2tr_transformation([eventClause(Head,seq(I1,I2))|T],TRRules):-
+	out_of_order(on),
+	garbage_clt(on),
+	FirstClause = trClause(event(I1,[T1,T2]),ins_order(goal(event(I2),event(I1,[T1,T2]),event(Head)))),
+	SecondClause = trClause(event(I2,[T3,T4]),
+		seq(db(goal(event(I2),event(I1,[T1,T2]),event(Head))), 
+			seq(del(goal(event(I2),event(I1,[T1,T2]),event(Head))),
+				seq(less(T2,T3),event(Head,[T1,T4]))))),
+	ThirdClause = trClause(event(I2,[T1,T2]),ins_order(goal(event(I1),event(I2,[T1,T2]),event(Head)))),
+	FourthClause = trClause(event(I1,[T3,T4]),
+		seq(db(goal(event(I1),event(I2,[T1,T2]),event(Head))), 
+			seq(del(goal(event(I1),event(I2,[T1,T2]),event(Head))),
+				seq(less(T4,T1),
+					seq(less(T4,T2),event(Head,[T3,T2])))))),
+	event2tr_transformation(T,RestTRRules),
+	TRRules =[FirstClause,SecondClause,ThirdClause,FourthClause|RestTRRules],
+	!.
+% out_of_order without garbage collector
+event2tr_transformation([eventClause(Head,seq(I1,I2))|T],TRRules):-
+	out_of_order(on),
+	garbage_clt(off),
+	FirstClause = trClause(event(I1,[T1,T2]),ins(goal(event(I2),event(I1,[T1,T2]),event(Head)))),
+	SecondClause = trClause(event(I2,[T3,T4]),
+		seq(db(goal(event(I2),event(I1,[T1,T2]),event(Head))), 
+			seq(del(goal(event(I2),event(I1,[T1,T2]),event(Head))),
+				seq(less(T2,T3),event(Head,[T1,T4]))))),
+	ThirdClause = trClause(event(I2,[T1,T2]),ins(goal(event(I1),event(I2,[T1,T2]),event(Head)))),
+	FourthClause = trClause(event(I1,[T3,T4]),
+		seq(db(goal(event(I1),event(I2,[T1,T2]),event(Head))), 
+			seq(del(goal(event(I1),event(I2,[T1,T2]),event(Head))),
+				seq(less(T4,T1),
+					seq(less(T4,T2),event(Head,[T3,T2])))))),
+	event2tr_transformation(T,RestTRRules),
+	TRRules =[FirstClause,SecondClause,ThirdClause,FourthClause|RestTRRules],
+	!.	
+	
+%concurrency
+event2tr_transformation([eventClause(Head,conc(I1,I2))|T],TRRules):-
+	FirstClause = trClause(event(I1,[T1,T2]),
+		seq(not_bkEdb(goal(event(I1),event(I2,[_,_]),event(Head))),ins(goal(event(I2),event(I1,[T1,T2]),event(Head))))),
+	SecondClause = trClause(event(I1,[T3,T4]),
+		seq(del(goal(event(I1),event(I2,[T1,T2]),event(Head))),seq(less(T3,T2),seq(min(T1,T3,T0),seq(max(T2,T4,T5),event(Head,[T0,T5])))))),
+	ThirdClause = trClause(event(I2,[T1,T2]),
+		seq(not_bkEdb(goal(event(I2),event(I1,[_,_]),event(Head))),ins(goal(event(I1),event(I2,[T1,T2]),event(Head))))),
+	FourthClause = trClause(event(I2,[T3,T4]),
+		seq(del(goal(event(I2),event(I1,[T1,T2]),event(Head))),seq(less(T3,T2),seq(min(T1,T3,T0),seq(max(T2,T4,T5),event(Head,[T0,T5])))))),
+	event2tr_transformation(T,RestTRRules),
+	TRRules =[FirstClause,SecondClause,ThirdClause,FourthClause|RestTRRules],
+	!.
+% classical conjunction
+event2tr_transformation([eventClause(Head,cand(I1,I2))|T],TRRules):-
+	FirstClause = trClause(event(I1,[T1,T2]),
+		seq(not_bkEdb(goal(event(I1),event(I2,[_,_]),event(Head))),ins(goal(event(I2),event(I1,[T1,T2]),event(Head))))),
+	SecondClause = trClause(event(I1,[T3,T4]),
+		seq(del(goal(event(I1),event(I2,[T1,T2]),event(Head))),seq(min(T1,T3,T0),seq(max(T2,T4,T5),event(Head,[T0,T5]))))),
+	ThirdClause = trClause(event(I2,[T1,T2]),
+		seq(not_bkEdb(goal(event(I2),event(I1,[_,_]),event(Head))),ins(goal(event(I1),event(I2,[T1,T2]),event(Head))))),
+	FourthClause = trClause(event(I2,[T3,T4]),
+		seq(del(goal(event(I2),event(I1,[T1,T2]),event(Head))),seq(min(T1,T3,T0),seq(max(T2,T4,T5),event(Head,[T0,T5]))))),
+	event2tr_transformation(T,RestTRRules),
+	TRRules =[FirstClause,SecondClause,ThirdClause,FourthClause|RestTRRules],
+	!.
+% disjunction
+event2tr_transformation([eventClause(Head,or(I1,I2))|T],TRRules):- 
+	FirstClause = trClause(event(I1, [T1,T2]), event(Head, [T1,T2])),
+	SecondClause = trClause(event(I2, [T3,T4]), event(Head, [T3,T4])),
+	event2tr_transformation(T,RestTRRules),
+	TRRules = [FirstClause,SecondClause|RestTRRules],
+	!.
+% classical conjucted negation : cnot
+event2tr_transformation([eventClause(Head,Body)|T],TRRules):-
+	Body =.. [cnot,I1,I2],
+	event2tr_transformation(T,RestTRRules),
+	% m :- a cnot b , I1 = a ,I2 = b , 
+	TRRules =[
+		trClause(event(I1,[T1,T2]),
+			seq(
+				tor(
+					not_bkEdb(goal(_,event(I2,[T3,T4]),_)),
+					seq(
+						edbCheck(goal(_,event(I2,[T3,T4]),_)),
+						tor(less(T4,T1),less(T2,T3)))),
+				event(Head,[T1,T2])) ),
+		trClause(event(I2,[T3,T4]),ins(goal(_EV1,event(I2,[T3,T4]),_EV2)))|RestTRRules
+	],
+	!.	
+% restricted serial conjuction negation : rcnot
+event2tr_transformation([eventClause(Head,Body)|T],TRRules):-
+	Body =.. [rcnot,I1,I2,[TA,TB]],
+	event2tr_transformation(T,RestTRRules),
+	% m :- a rcnot b , I1 = a ,I2 = b , 
+	TRRules =[
+		trClause(event(I1,[_T2,T3]),
+			seq(
+				tor(
+					not_bkEdb(goal(_,event(I2,[T4,T5]),_)),
+					seq(
+						edbCheck(goal(_,event(I2,[T4,T5]),_)),
+						tor(less(T5,TA),less(TB,T4)))),
+				event(Head,[TA,TB])) ),
+		trClause(event(I2,[T3,T4]),ins(goal(_EV1,event(I2,[T3,T4]),_EV2)))|RestTRRules
+	],
+	!.
+event2tr_transformation([eventClause(Head,Body)|T],TRRules):-
+	event2tr_transformation(T,RestTRRules),
+	TRRules = [trClause(event(Body,[T1,T2]),event(Head,[T1,T2]))|RestTRRules],
+	!.
+event2tr_transformation([],[]).
+
+% loggingTRFile(+InputFile,+TRRules)
+loggingTRFile(InputFile,TRRules):-
+	logging(on),
+	atom_concat(InputFile,'.ctr',TRFile),
+	open(TRFile,write,TRFileHandle),
+	writeTRFile(TRFileHandle,TRRules),
+	close(TRFileHandle),
+	!.
+loggingTRFile(_InputFile,_TRRules).
+% writeTRFile(+TRFileHandle,+TRRules)
+writeTRFile(TRFileHandle,[H|T]):-
+	write(TRFileHandle,H),write(TRFileHandle,'.\n'),
+	writeTRFile(TRFileHandle,T),
+	!.
+writeTRFile(_TRFileHandle,[]).
+
+% Execution:
+event(E):-
+	incCounter(timeCounter),
+	counter(timeCounter,Counter),
+	datime(datime(Y,M,D,H,Min,Sec)),
+	Datime = datime(Y,M,D,H,Min,Sec,Counter),
+	event_trigger(event(E,[Datime,Datime])).
+event(E,[datime(Y1,M1,D1,H1,Min1,Sec1,Counter1),datime(Y2,M2,D2,H2,Min2,Sec2,Counter2)]):-
+	event_trigger(event(E,[datime(Y1,M1,D1,H1,Min1,Sec1,Counter1),datime(Y2,M2,D2,H2,Min2,Sec2,Counter2)])),
+	!.
+event(E,[T1,T2]):-
+	event_trigger(event(E,[T1,T2])),
+	!.
+event(E,T):-
+	number(T),
+	datime(datime(Y,M,D,H,Min,Sec)),
+	event_trigger(event(E,[datime(Y,M,D,H,Min,Sec,T),datime(Y,M,D,H,Min,Sec,T)])),
+	!.
+%Execution event for Out of Order Event.
+:- dynamic(windowsvalue/1).
+:- assert(windowsvalue(3)).
+ooo_event(E,[T1,T2]):-
+	garbage_clt(on),
+	incCount,
+	event_trigger(event(E,[T1,T2])),
+	count(Now),
+	garbage_out(Now),
+	!.
+ooo_event(E,[T1,T2]):-
+	garbage_clt(off),
+	event_trigger(event(E,[T1,T2])),
+	!.
+
+
+
+:- dynamic(trRules/1).
+% event_trigger(+Event)
+% executes an event and triggers all actions and complex events triggerd by this event
+event_trigger(ins_order(A)):-
+	log(event(ins_order(A))),
+	ins_order(A),
+	!.
+event_trigger(ins(A)):-
+	log(event(ins(A))),
+	ins(A),
+	!.
+event_trigger(del(A)):-
+	log(event(del(A))),
+	del(A),
+	!.
+event_trigger(edbCheck(A)):-
+	log(event(bkEdb(A))),
+	bkEdb(A),
+	!.
+event_trigger(db(A)):-
+	log(bkEdb(A)),
+	bkEdb(A),
+	!.
+event_trigger(prolog(A)):-
+	log(prolog(A)),
+	call(A),
+	!.
+event_trigger(query(A)):-
+	log(query(A)),
+	call(A),
+	!.
+event_trigger(not_bkEdb(A)):-
+	log(event(not_bkEdb(A))),
+	\+( bkEdb(A) ),
+	!.
+event_trigger(less(T1,T2)):-
+	log(event(less(T1,T2))),
+	lessDatime(T1,T2),
+	!.
+event_trigger(min(T1,T2,T3)):-
+	lessDatime(T1,T2) -> T3 = T1 ; T3 = T2,
+	!.
+event_trigger(max(T1,T2,T3)):-
+	lessDatime(T1,T2) -> T3 = T2 ; T3 = T1,
+	!.
+event_trigger(seq(E1,E2)):-
+	log(event(seq(E1,E2))),
+	event_trigger(E1),
+	event_trigger(E2).
+event_trigger(tor(E1,E2)) :-
+	log(fireEvent(tor(E1,E2))),
+	event_trigger(E1);
+	event_trigger(E2).
+event_trigger(event(constrainedEvent(Event,Constraints),[T1,T2])):-
+	!,
+	log(checkConstraints(event(Event,[T1,T2]),Constraints)),
+	checkConstraints(Constraints,[T1,T2]),
+	log(event(Event,[T1,T2])),
+	assert(eventFired(event(Event,(T1,T2)))), % leave a trail of events that were fired, to be collected from Java
+	findall(Body,trRules(trClause(event(Event,[T1,T2]),Body)),List),
+	fireAllTRFormulas(List).
+event_trigger(event(Event,[T1,T2])):-
+	log(event(Event,[T1,T2])),
+	assert(eventFired(event(Event,(T1,T2)))), % leave a trail of events that were fired
+	findall(Body,trRules(trClause(event(Event,[T1,T2]),Body)),List),
+	fireAllTRFormulas(List).
+
+:- dynamic(eventFired/1).  % leave a trail of events that were fired
+
+% checkConstraints(Constraints,[T1,T2])
+checkConstraints(Constraints,[T1,_T2]) :-
+	myMember(startTime(S),Constraints),
+	lessDatime(T1,S),
+	!,
+	fail.
+checkConstraints(Constraints,[_T1,T2]) :-
+	myMember(endTime(E),Constraints),
+	lessDatime(E,T2),
+	!,
+	fail.
+checkConstraints(Constraints,[_T1,T2]) :-
+	myMember(startTime(datime(S_Y,S_M,S_D,S_H,S_Min,S_S,S_Counter)),Constraints),
+	absoluteTime(datime(S_Y,S_M,S_D,S_H,S_Min,S_S,S_Counter),S_AbsoluteTime),
+	absoluteTime(T2,T2_AbsoluteTime),
+	myMember(duration(Duration),Constraints),
+	E_AbsoluteTime is S_AbsoluteTime+Duration,
+	T2_AbsoluteTime > E_AbsoluteTime,
+	!,
+	fail.
+checkConstraints(Constraints,[T1,T2]) :-
+	\+( myMember(startTime(datime(_Y,_M,_D,_H,_Min,_S,_Counter)),Constraints) ),
+	absoluteTime(T1,T1_AbsoluteTime),
+	absoluteTime(T2,T2_AbsoluteTime),
+	myMember(duration(Duration),Constraints),
+	E_AbsoluteTime is T1_AbsoluteTime+Duration,
+	T2_AbsoluteTime > E_AbsoluteTime,
+	!,
+	fail.
+checkConstraints(_Constraints,[_T1,_T2]).
+
+% absoluteTime(T,AbsoluteTime) - althought this predicate is easy to use, it generates numbers too big to be stored in integer
+%absoluteTime(T,AbsoluteTime):-
+%	T = datime(Y,M,D,H,Min,S,Counter),
+%	AbsoluteTime is (((((((Y-1980)*365)+(M*31)+D)*24)+H)*60)+Min)*60+S.
+absoluteTime(T,AbsoluteTime):-
+	T = datime(_Y,_M,_D,H,Min,S,_Counter),
+	AbsoluteTime is (H*60+Min)*60+S.
+
+% lessDatime(T1,T2)
+lessDatime(datime(_T1_Y,_T1_M,_T1_D,_T1_H,_T1_Min,_T1_S,T1_Counter),datime(_T2_Y,_T2_M,_T2_D,_T2_H,_T2_Min,_T2_S,T2_Counter)):-
+	T1_Counter < T2_Counter,
+	!.
+lessDatime(T1,T2):-
+	number(T1),
+	number(T2),
+	T1 < T2.
+
+
+% fireAllTRFormulas(+List)
+fireAllTRFormulas([H|T]):-
+	fire_event(H),
+	fireAllTRFormulas(T).
+fireAllTRFormulas([]).
+fire_event(H):-
+	event_trigger(H),
+	!.
+fire_event(_H). % for the failed events to succeed
+:- dynamic(out/1).
+:- dynamic(failed/1).
+log(L):-
+	logFile(L),
+	logging(on),
+	(
+		(write('  Log:   '), write(L), nl),assert(out(L));
+		(write('  Failed:  '), write(L), nl,assert(out(failed(L))),fail)
+	).
+log(_L):- \+( logging(on) ). % logging(off) or retractall(logging(_))
+
+
+% backtrackable updates
+:- dynamic(bkEdb/1).
+db(A):-
+	bkEdb(A).
+ins(A):-
+	bkEdb(A),
+	!,
+	fail.
+ins(A):-
+	\+ bkEdb(A),
+	asserta(bkEdb(A)).
+ins(A):-
+	retract(bkEdb(A)),
+	!,
+	fail.
+del(A):-
+	\+(bkEdb(A)),
+	!,
+	fail.
+del(A):-
+	bkEdb(A),
+	retract(bkEdb(A)).
+del(A):-
+	asserta(bkEdb(A)),
+	!,
+	fail.
+	
+% insert for out of order.
+:- dynamic(gab_out/2).
+ins_order(A):-
+	bkEdb(A),
+	!,
+	fail.
+ins_order(A):-
+	\+ bkEdb(A),
+	count(Now),
+	asserta(bkEdb(A)),	
+	asserta(bkEdb(gab_out(A,Now))).
+		
+ins_order(A):-
+	retract(bkEdb(A)),
+	!,
+	fail.
+
+:- dynamic(counter/2). % counter(CounterName,Value)
+resetCounter(Name):-
+	retractall(counter(Name,_)),
+	assert(counter(Name,1)),
+	!.
+incCounter(Name):-
+	counter(Name,Value),
+	Value1 is Value+1,
+	retractall(counter(Name,_)),
+	assert(counter(Name,Value1)),
+	!.
+incCounter(Name):-
+	resetCounter(Name),
+	!.
+
+% used by N-times
+trans_ntime(Temp, Event, N, Out) :-
+	N > 1,
+	NTime is N-1,
+	Temp1 =.. [seq, Temp, Event],
+	trans_ntime(Temp1, Event, NTime, Out),
+	!.
+trans_ntime(Temp, Event, 1, Out) :- 
+	Out =.. [seq, Temp, Event],
+	!.
+trans_ntime(Temp, _Event, 0, Out) :-
+	Out = Temp,
+	!.
+
+myMember(H,[H|_T]).
+myMember(H,[_|T]):-
+	myMember(H,T).
+
+myAppend([],L,L).
+myAppend([H|T],L,[H|R]):-
+	myAppend(T,L,R).
+
+% :- import datime/1 from standard. % for XSB Prolog
+datime(datime(Y,M,D,H,Min,Sec)):- get_time(TimeStamp), stamp_date_time(TimeStamp,date(Y,M,D,H,Min,Sec1,_,_,_),0),floor(Sec1,Sec). % for SWI or Quintus 
+%datime(datime(2009,7,14,1,1,1)). % get_time gives some errors under Windows, so we use a fixed value for testing
+
+% left2rightAssoc(+BeginingFormula,+RestFormula,-ReturnFormula) 
+left2rightAssoc([_Op,I1],Input,F):-
+	(Input =.. [ntime, Event, N],
+	 Temp =.. [seq, I1, Event],
+	 N1 is N-1,
+	 trans_ntime(Temp, Event, N1, Out),
+	 F = Out;
+	Input =.. [seq,I2,I3],
+	(I2 =.. [ntime, Event, N2],
+	 	Temp =.. [seq, I1, Event],
+	 	NI2 is N2-1,
+	 	trans_ntime(Temp, Event, NI2, Out),
+	 	left2rightAssoc([seq,Out],I3,F);
+	 I3 =.. [ntime, Event, N3],
+	 	Temp1 =.. [seq, I1, I2],
+	 	Temp2 =.. [seq, Temp1, Event],
+	 	NI3 is N3-1,
+	 	trans_ntime(Temp2, Event, NI3, Out),
+	 	F = Out;
+	Temp =.. [seq,I1,I2],
+	left2rightAssoc([seq,Temp],I3,F)),
+	!).
+left2rightAssoc([Op,I1],Input,F):-
+	Input =.. [I2],
+	F =.. [Op,I1,I2],
+	!.
+left2rightAssoc([],Input,F):-
+	Input =.. [seq,I1,I2],
+	(I1 =.. [ntime, Event, N],
+	 Temp =.. [seq, Event, Event],
+	 N1 is N-2,
+	 trans_ntime(Temp, Event, N1, F_temp),
+	 left2rightAssoc([seq,F_temp],I2,F);
+	 left2rightAssoc([seq,I1],I2,F)),
+	!.
+
+%the count is our global time represented as a uniteless integer
+:- dynamic(count/1).
+:- assert(count(0)).
+incCount :- count(Y) , X is Y+1, retractall(count(_)), assert(count(X)), !.
+resetCount :- retractall(count(_)), assert(count(0)), !.
+%
+resetProlog :- retractall(bkEdb(_)),retractall(eventFired(_)),retractall(out(_)),retractall(trRules(_)). 
+%% NOTE :: This should prob. removed, please check TODO
+%,resetCounter(binarizationCounter).
+
+garbage_out(T1) :-
+	windowsvalue(T2),
+	T3 is T1-T2,
+	T3 > 0,
+	findall(Event, bkEdb(gab_out(Event,T3)), List1),
+	findall(GC,(bkEdb(GC), GC =.. [gab_out,_Event,T3]),List2),
+	retractList(List1),
+	retractList(List2),
+	!.
+garbage_out(_T1).
+
+%retract all members of a list
+retractList([H|T]) :-	
+	del(H) ,
+	%write('LOG: delete form database : '),
+	%write(H),nl,
+	retractList(T);
+	true.
+retractList([]).
+
+
+:- dynamic(logfilename/1).
+:- dynamic(loggingfile/1).
+%:- assert(loggingfile(on)).
+:- assert(loggingfile(off)).
+
+
+enable_logfile :- retractall(loggingfile(_)), assert(loggingfile(on)).
+
+disable_logfile :- retractall(loggingfile(_)), assert(loggingfile(off)).
+
+logFile(L) :-
+	loggingfile(on), 
+	logfilename(LogFile),
+	open(LogFile,append,LogFileHandle),
+	write(LogFileHandle,L),
+	write(LogFileHandle,'.\n'),
+	close(LogFileHandle),
+	!.
+logFile(_L).
+
+
+createNewFile(FileName) :-
+	retractall(logfilename(_)),
+	assert(logfilename(FileName)),
+	open(FileName,write,LogFileHandle),
+	close(LogFileHandle),
+	!.
+createNewFile(_FileName).
+
+

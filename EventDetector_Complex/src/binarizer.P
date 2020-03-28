@@ -1,0 +1,193 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% enables sharing between rule bodies
+:- dynamic(rule_sharing/1).
+:- dynamic(rule_sharing_debuging/1).
+:- dynamic(event_clause_debuging/1).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% binarization(+EventRules,-BinaryEventRules)
+binarization(EventRules,BinaryEventRules):-
+        binarization(EventRules,[],BinaryEventRulesReversed),
+        my_reverse(BinaryEventRulesReversed,BinaryEventRules).
+
+%binarization(+EventRules,+PredBinaryEventRules,-BinaryEventRules)
+binarization([eventClause(Label,Head,Body)|RestEventRules],
+		PredBinaryEventRules,BinaryEventRules):-
+        !,
+        binarization_formula(Label,Body,PredBinaryEventRules,NewBody,B1),
+        binarization(RestEventRules,[eventClause(Label,Head,NewBody)|B1],
+                BinaryEventRules).
+binarization([],BinaryEventRules,BinaryEventRules).
+
+% binarization_formula(+ParentLabel,+Body,+PredBinaryEventRules,-NewBody,
+%        -ReturnBinaryEventRules)
+
+% sharing binary operators
+binarization_formula(Label,Body,PredBinaryEventRules,NewBody,
+                ReturnBinaryEventRules):-
+        rule_sharing(on),
+        Body =.. [Op,I1,I2], Op=seqf,
+        %op_functor(_OpString,Op),
+        binarization_formula(Label,I1,PredBinaryEventRules,NewI1,B1),
+        binarization_formula(Label,I2,B1,NewI2,B2),
+        EventBody =.. [Op,NewI1,NewI2],
+        % check for sharing
+        my_member_variant_for_binarization(eventClause(Label,NewEvent,EventBody),PredBinaryEventRules),
+        my_member(eventClause(Label,NewEvent,EventBody),PredBinaryEventRules),
+        !,
+        ReturnBinaryEventRules = B2,
+        NewBody = NewEvent.
+
+% sharing unary operators
+binarization_formula(Label,Body,PredBinaryEventRules,NewBody,
+                ReturnBinaryEventRules):-
+        rule_sharing(on),
+        Body =.. [Op,I1],
+        op_functor(_OpString,Op),
+        binarization_formula(Label,I1,PredBinaryEventRules,NewI1,B1),
+        EventBody =.. [Op,NewI1],
+        % check for sharing
+        my_member_variant_for_binarization(eventClause(Label,NewEvent,EventBody),PredBinaryEventRules),
+        my_member(eventClause(Label,NewEvent,EventBody),PredBinaryEventRules),
+        !,
+        ReturnBinaryEventRules = B1,
+        NewBody = NewEvent.
+
+% cnot binarization
+binarization_formula(Label,Body,PredBinaryEventRules,NewBody,
+                ReturnBinaryEventRules):-
+        Body = cnotf(seqf(I11,I12),I2),
+        !,
+        binarization_formula(Label,I11,PredBinaryEventRules,NewI11,B11),
+        binarization_formula(Label,I12,B11,NewI12,B12),
+        binarization_formula(Label,I2,B12,NewI2,B2),
+        incCounter(binarizationCounter), counter(binarizationCounter,Counter),
+        number_codes(Counter,CounterList),
+        atom_codes(NewEventPred,[116,101,109,112,95,101,95|CounterList]),
+        NewEvent =.. [NewEventPred,NewI11,NewI12,NewI2],
+        EventBody = cnotf(seqf(NewI11,NewI12),NewI2),
+        NewBody = NewEvent,
+        ReturnBinaryEventRules = [eventClause(Label,NewEvent,EventBody)|B2].
+
+% star_times binarization
+binarization_formula(Label,Body,PredBinaryEventRules,NewBody,
+                ReturnBinaryEventRules):-
+        Body = seqf(I1,star_timesf(I2)),
+        !,
+        binarization_formula(Label,I1,PredBinaryEventRules,NewI1,B1),
+        binarization_formula(Label,I2,B1,NewI2,B2),
+        incCounter(binarizationCounter), counter(binarizationCounter,Counter),
+        number_codes(Counter,CounterList),
+        atom_codes(NewEventPred,[116,101,109,112,95,101,95|CounterList]),
+        NewEvent =.. [NewEventPred,NewI1,NewI2],
+        EventBody = seqf(NewI1,star_timesf(NewI2)),
+        NewBody = NewEvent,
+        ( rule_sharing_debuging(on) -> assert(event_clause_debuging(eventClause(Label,NewEvent,EventBody))) ; true ),
+        ReturnBinaryEventRules = [eventClause(Label,NewEvent,EventBody)|B2].
+
+% other binary operators - not shared (see sharing above)
+binarization_formula(Label,Body,PredBinaryEventRules,NewBody,
+                ReturnBinaryEventRules):-
+        Body =.. [Op,I1,I2],
+        op_functor(_OpString,Op),
+        !,
+        binarization_formula(Label,I1,PredBinaryEventRules,NewI1,B1),
+        binarization_formula(Label,I2,B1,NewI2,B2),
+        incCounter(binarizationCounter), counter(binarizationCounter,Counter),
+        number_codes(Counter,CounterList),
+        atom_codes(NewEventPred,[116,101,109,112,95,101,95|CounterList]),
+        NewEvent =.. [NewEventPred,NewI1,NewI2],
+        EventBody =.. [Op,NewI1,NewI2],
+        NewBody = NewEvent,
+        ( rule_sharing_debuging(on) -> assert(event_clause_debuging(eventClause(Label,NewEvent,EventBody))) ; true ),
+        ReturnBinaryEventRules = [eventClause(Label,NewEvent,EventBody)|B2].
+
+% other unary operators - not shared (see sharing above)
+binarization_formula(Label,Body,PredBinaryEventRules,NewBody,
+                ReturnBinaryEventRules):-
+        Body =.. [Op,I],
+        op_functor(_OpString,Op),
+        Op \= star_times,
+        !,
+        binarization_formula(Label,I,PredBinaryEventRules,NewI,B),
+        incCounter(binarizationCounter), counter(binarizationCounter,Counter),
+        number_codes(Counter,CounterList),
+        atom_codes(NewEventPred,[116,101,109,112,95,101,95|CounterList]),
+        NewEvent =.. [NewEventPred,NewI],
+        EventBody =.. [Op,NewI],
+        NewBody = NewEvent,
+        ReturnBinaryEventRules = [eventClause(Label,NewEvent,EventBody)|B].
+
+% all other formulas
+binarization_formula(_Label,Body,PredBinaryEventRules,NewBody,
+                ReturnBinaryEventRules):-
+        !,
+        NewBody = Body,
+        ReturnBinaryEventRules = PredBinaryEventRules.
+
+% logging_binary_file(+InputFile,+BinaryEventRules)
+logging_binary_file(InputFile,BinaryEventRules):-
+        output_temporary_files(on),
+        !,
+        atom_concat(InputFile,'.bin',BinaryFile),
+        open(BinaryFile,write,BinaryFileHandle),
+        writeBinaryFile(BinaryFileHandle,BinaryEventRules),
+        close(BinaryFileHandle).
+logging_binary_file(_InputFile,_BinaryEventRules).
+% writeBinaryFile(+BinaryFileHandle,+BinaryEventRules)
+writeBinaryFile(BinaryFileHandle,[H|T]):-
+        !,
+        write(BinaryFileHandle,H),write(BinaryFileHandle,'.\n'),
+        writeBinaryFile(BinaryFileHandle,T).
+writeBinaryFile(_BinaryFileHandle,[]).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% left2right_associate(+BeginingFormula,+RestFormula,-ReturnFormula)
+left2right_associate([_Op,I1],Input,F):-
+        (Input =.. [ntime, Event, N],
+         Temp =.. [seqf, I1, Event],
+         !,
+         N1 is N-1,
+         trans_ntime(Temp, Event, N1, Out),
+         F = Out;
+        Input =.. [seqf,I2,I3],
+        (I2 =.. [ntime, Event, N2],
+                 Temp =.. [seqf, I1, Event],
+                 NI2 is N2-1,
+                 trans_ntime(Temp, Event, NI2, Out),
+                 left2right_associate([seqf,Out],I3,F);
+         I3 =.. [ntime, Event, N3],
+                 Temp1 =.. [seqf, I1, I2],
+                 Temp2 =.. [seqf, Temp1, Event],
+                 NI3 is N3-1,
+                 trans_ntime(Temp2, Event, NI3, Out),
+                 F = Out;
+        Temp =.. [seqf,I1,I2],
+        left2right_associate([seqf,Temp],I3,F))).
+left2right_associate([Op,I1],Input,F):-
+        !,
+        Input =.. [I2],
+        F =.. [Op,I1,I2].
+left2right_associate([],Input,F):-
+        !,
+        Input =.. [seqf,I1,I2],
+        (I1 =.. [ntime, Event, N],
+         Temp =.. [seqf, Event, Event],
+         N1 is N-2,
+         trans_ntime(Temp, Event, N1, F_temp),
+         left2right_associate([seqf,F_temp],I2,F);
+         left2right_associate([seqf,I1],I2,F)).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+my_member_variant_for_binarization(eventClause(Label,NewEvent,EventBody),
+                [eventClause(Label,NewEvent,EventBody2)|_T]):-
+        prolog_backend(swi),
+        variant(EventBody,EventBody2).
+my_member_variant_for_binarization(eventClause(Label,NewEvent,EventBody),
+                [eventClause(Label,NewEvent,EventBody2)|_T]):-
+        prolog_backend(yap),
+        EventBody = EventBody2.
+my_member_variant_for_binarization(H,[_|T]):-
+        my_member_variant_for_binarization(H,T).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="var" path="TOMCAT_HOME/lib/servlet-api.jar"/>
+	<classpathentry kind="var" path="TOMCAT_HOME/lib/jasper.jar"/>
+	<classpathentry kind="var" path="TOMCAT_HOME/lib/jsp-api.jar"/>
+	<classpathentry kind="var" path="TOMCAT_HOME/lib/el-api.jar"/>
+	<classpathentry kind="var" path="TOMCAT_HOME/lib/annotations-api.jar"/>
+	<classpathentry kind="src" path="WEB-INF/src"/>
+	<classpathentry kind="src" output="work" path="work"/>
+	<classpathentry exported="true" kind="lib" path="C:/Documents and Settings/Administrator/Desktop/etalis/etalis/lib/gdata-client-1.0.jar"/>
+	<classpathentry exported="true" kind="lib" path="C:/Documents and Settings/Administrator/Desktop/etalis/etalis/lib/gdata-core-1.0.jar"/>
+	<classpathentry exported="true" kind="lib" path="C:/Documents and Settings/Administrator/Desktop/etalis/etalis/lib/gdata-finance-2.0.jar"/>
+	<classpathentry exported="true" kind="lib" path="C:/Documents and Settings/Administrator/Desktop/etalis/etalis/lib/google-collect-1.0-rc1.jar"/>
+	<classpathentry exported="true" kind="lib" path="C:/Documents and Settings/Administrator/Desktop/etalis/etalis/lib/interprolog.jar"/>
+	<classpathentry exported="true" kind="lib" path="C:/Documents and Settings/Administrator/Desktop/etalis/etalis/lib/interprolog_windows.jar"/>
+	<classpathentry exported="true" kind="lib" path="C:/Documents and Settings/Administrator/Desktop/etalis/etalis/lib/jpl.jar">
+		<attributes>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="C:/Program Files/pl/bin"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="output" path="WEB-INF/classes"/>
+</classpath>

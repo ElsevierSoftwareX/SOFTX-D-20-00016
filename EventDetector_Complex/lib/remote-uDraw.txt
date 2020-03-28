@@ -1,0 +1,5 @@
+[menu(file(open_graph_placed("output.udg"))),
+ menu(file(export(true,"jpeg","output.jpg"))),
+ menu(file(exit))
+]
+

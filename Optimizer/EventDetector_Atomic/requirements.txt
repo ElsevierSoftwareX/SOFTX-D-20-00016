@@ -1,0 +1,3 @@
+pandas
+dataclasses
+dataclasses-json

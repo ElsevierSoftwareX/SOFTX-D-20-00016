@@ -1,0 +1,551 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% The flag "etalis_justification/1" and edges "justification_edge/2"
+%  are defined in "compiler.P"
+
+% justify_event/2
+justify_event(Event,[T1,T2],J):-
+	justification_edge(
+        	event(Event,[T1,T2]),
+        	_Edge),
+        justify_event_positive(Event,[T1,T2],J),
+	!.
+justify_event(Event,[T1,T2],J):-
+	justify_event_negative(Event,[T1,T2],J),
+	!.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+justify_event_positive(Event,[T1,T2],J):-
+	justification_edge(
+        	event(Event,[T1,T2]),
+        	clause_body(Label,
+                	event(Body,[T1,T2])
+                )),
+        justify_event_positive(Body,[T1,T2],J2),
+        J = justification(Label,head(Event,[T1,T2]),J2),
+	!.
+justify_event_positive(event(I1,[T1_rule2,T2_rule2]),[_,_],J):-
+	justify_event_positive(I1,[T1_rule2,T2_rule2],J),
+	!.
+	
+justify_event_positive(prolog(X),[_T1,_T2],prolog(X)):-
+	!.
+justify_event_positive(dof(X),[_T1,_T2],prolog(X)):-
+	!.
+justify_event_positive(wheref(X),[_T1,_T2],prolog(X)):-
+	!.
+justify_event_positive(Event,[T1,T2],J):-
+	justification_edge(
+        	event(Event,[T1,T2]),
+        	clause_body(Label,
+                	Body
+                	)),
+	Body =.. [
+		Functor,
+		event(I1,[T1_rule2,T2_rule2]),
+                event(I2,[T3_rule2,T4_rule2]) ],
+        justify_event_positive(I1,[T1_rule2,T2_rule2],J2),
+        justify_event_positive(I2,[T3_rule2,T4_rule2],J3),
+        JBody =.. [Functor,J2,J3],
+        J = justification(Label,head(Event,[T1,T2]),JBody),
+	!.
+justify_event_positive(Event,[T1,T2],J):-
+	justification_edge(
+        	event(Event,[T1,T2]),
+        	clause_body(Label,
+                	Body
+                	)),
+	Body =.. [
+		Functor,
+		Arg1,
+                Arg2 ],
+	( Functor=seqf ; Functor=candf ; Functor=orf ; Functor=startsf ; 
+	  Functor=finishf ; Functor=meets ),
+        justify_event_positive(Arg1,[_,_],J2),
+        justify_event_positive(Arg2,[_,_],J3),
+        JBody =.. [Functor,J2,J3],
+        J = justification(Label,head(Event,[T1,T2]),JBody),
+	!.
+justify_event_positive(Event,[T1,T2],J):-
+	justification_edge(
+        	event(Event,[T1,T2]),
+        	clause_body(Label,
+                	Body
+                	)),
+	Body =.. [
+		Aggregate,
+		Functor,
+		event(I1,[T1_rule2,T2_rule2]),
+                event(I2,[T3_rule2,T4_rule2]) ],
+        justify_event_positive(I1,[T1_rule2,T2_rule2],J2),
+        justify_event_positive(I2,[T3_rule2,T4_rule2],J3),
+        JBody =.. [Aggregate,Functor,J2,J3],
+        J = justification(Label,head(Event,[T1,T2]),JBody),
+	!.
+justify_event_positive(Event,[T1,T2],J):-
+	% event Event,[T1,T2] is received
+	fired_event(Event,[T1,T2]),
+	J = justification(unlabeled,head(Event,[T1,T2]),default),
+	!.
+justify_event_positive(E,[T1,T2],J):-
+	E =.. [Functor,Event1,Event2],
+	( Functor=seqf ; Functor=candf ; Functor=orf ; Functor=startsf ; 
+		Functor=finishf ; Functor=meets ),
+	justify_event_positive(Event1,[_T1,_T3],J2),
+        justify_event_positive(Event2,[_T4,_T2],J3),
+        JBody =.. [Functor,J2,J3],
+        J = justification(unlabeled,head(seqf(Event1,Event2),[T1,T2]),JBody),
+	!.
+justify_event_positive(E,[T1,T2],J):-
+	E =.. [aggregate,Functor,Event1,Event2],
+	justify_event_positive(Event1,[_T1,_T3],J2),
+        justify_event_positive(Event2,[_T4,_T2],J3),
+        JBody =.. [aggregate,Functor,J2,J3],
+        J = justification(unlabeled,head(seqf(Event1,Event2),[T1,T2]),JBody),
+	!.
+justify_event_positive(Event,[T1,T2],J):-
+	% no justification edge was found for the event Event,[T1,T2]
+	J = justification(unlabeled,head(Event,[T1,T2]),default),
+	!.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% justify_event_negative/3
+justify_event_negative(Event,[T1,T2],J):-
+	justification_edge(
+        	event(Event,[T1,T2]),
+        	clause_body(Label,
+                	event(Body,[T1,T2])
+                )),
+        justify_event_negative(Body,[T1,T2],J2),
+        J = justification(Label,head(Event,[T1,T2]),J2),
+	!.
+justify_event_negative(event(I1,[T1_rule2,T2_rule2]),[_,_],J):-
+	justify_event_negative(I1,[T1_rule2,T2_rule2],J),
+	!.
+	
+justify_event_negative(prolog(X),[_T1,_T2],prolog(X)):-
+	!.
+justify_event_negative(dof(X),[_T1,_T2],prolog(X)):-
+	!.
+justify_event_negative(wheref(X),[_T1,_T2],prolog(X)):-
+	!.
+justify_event_negative(Event,[T1,T2],J):-
+	justification_edge(
+        	event(Event,[T1,T2]),
+        	clause_body(Label,
+                	Body
+                	)),
+	Body =.. [
+		Functor,
+		event(I1,[T1_rule2,T2_rule2]),
+                event(I2,[T3_rule2,T4_rule2]) ],
+        justify_event_negative(I1,[T1_rule2,T2_rule2],J2),
+        justify_event_negative(I2,[T3_rule2,T4_rule2],J3),
+        JBody =.. [Functor,J2,J3],
+        J = justification(Label,head(Event,[T1,T2]),JBody),
+	!.
+justify_event_negative(Event,[T1,T2],J):-
+	justification_edge(
+        	event(Event,[T1,T2]),
+        	clause_body(Label,
+                	Body
+                	)),
+	Body =.. [
+		Functor,
+		Arg1,
+                Arg2 ],
+	( Functor=seqf ; Functor=candf ; Functor=orf ; Functor=startsf ; 
+	  Functor=finishf ; Functor=meets ),
+        justify_event_negative(Arg1,[_,_],J2),
+        justify_event_negative(Arg2,[_,_],J3),
+        JBody =.. [Functor,J2,J3],
+        J = justification(Label,head(Event,[T1,T2]),JBody),
+	!.
+justify_event_negative(Event,[T1,T2],J):-
+	justification_edge(
+        	event(Event,[T1,T2]),
+        	clause_body(Label,
+                	Body
+                	)),
+	Body =.. [
+		Aggregate,
+		Functor,
+		event(I1,[T1_rule2,T2_rule2]),
+                event(I2,[T3_rule2,T4_rule2]) ],
+        justify_event_negative(I1,[T1_rule2,T2_rule2],J2),
+        justify_event_negative(I2,[T3_rule2,T4_rule2],J3),
+        JBody =.. [Aggregate,Functor,J2,J3],
+        J = justification(Label,head(Event,[T1,T2]),JBody),
+	!.
+justify_event_negative(Event,[T1,T2],J):-
+	findall(binary_event_rule(Label,Event,Body),
+		binary_event_rule(Label,Event,Body),L),
+	L \= [],
+	justify_event_failure(Event,[T1,T2],L,J),
+	!.
+justify_event_negative(Event,[T1,T2],J):-
+	% event Event,[T1,T2] is received
+	fired_event(Event,[T1,T2]),
+	J = justification(unlabeled,head(Event,[T1,T2]),default),
+	!.
+justify_event_negative(E,[T1,T2],J):-
+	E =.. [Functor,Event1,Event2],
+	( Functor=seqf ; Functor=candf ; Functor=orf ; Functor=startsf ; 
+		Functor=finishf ; Functor=meets ),
+	justify_event_negative(Event1,[_T1,_T3],J2),
+        justify_event_negative(Event2,[_T4,_T2],J3),
+        JBody =.. [Functor,J2,J3],
+        J = justification(unlabeled,head(seqf(Event1,Event2),[T1,T2]),JBody),
+	!.
+justify_event_negative(E,[T1,T2],J):-
+	E =.. [aggregate,Functor,Event1,Event2],
+	justify_event_negative(Event1,[_T1,_T3],J2),
+        justify_event_negative(Event2,[_T4,_T2],J3),
+        JBody =.. [aggregate,Functor,J2,J3],
+        J = justification(unlabeled,head(seqf(Event1,Event2),[T1,T2]),JBody),
+	!.
+justify_event_negative(Event,[T1,T2],J):-
+	% no justification edge was found for the event Event,[T1,T2]
+	J = justification(unlabeled,head(Event,[T1,T2]),failed),
+	!.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% justify_event_failure/3
+justify_event_failure(_Event,[_T1,_T2],[],[]):-
+	!.
+justify_event_failure(Event,[T1,T2],
+		[binary_event_rule(Label,Event,Body)|T],
+		[HJ|J3]):-
+        justify_event(Body,[_T3,_T4],J2),
+        justify_event_failure(Event,[T1,T2],T,J3),
+        HJ = justification(Label,head(Event,[T1,T2]),failed(J2)),
+	!.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% write_justification/1
+%  writes justification keeping some meaningful indentation
+write_justification(J):-
+	nl,nl,
+	write_justification_internal(0,J),
+	nl,nl,
+	!.
+
+% write_justification_internal/2
+write_justification_internal(I,justification(unlabeled,head(Event,[T1,T2]),
+		default)):-
+	write_spaces(I),
+	write(event(Event,[T1,T2])),nl,
+	!.
+write_justification_internal(I,justification(unlabeled,head(Event,[T1,T2]),
+		failed)):-
+	write_spaces(I),
+	write(failed(event(Event,[T1,T2]))),nl,
+	!.
+write_justification_internal(I,L):-
+	is_list(L),
+	write_spaces(I),write('failed forall rules('),nl,
+	I1 is I+1,
+	write_justification_list_internal(I1,L),
+	write_spaces(I),write(')'),nl,
+	!.
+write_justification_internal(I,justification(Label,head(Event,[T1,T2]),
+		failed(J2))):-
+	(Label \= unlabeled -> 
+		(write_spaces(I),write(Label),write(' rule:'),nl); true ),
+	write_spaces(I),write('failed('),nl,
+	write_spaces(I),write(event(Event,[T1,T2])),nl,
+	write_spaces(I),writeN(20,'-'),nl,
+	I1 is I+1,
+	write_justification_internal(I1,J2),
+	write_spaces(I),write(')'),nl,
+	!.
+write_justification_internal(I,justification(Label,head(Event,[T1,T2]),E)):-
+	E =.. [Functor,J2,J3],
+	( Functor=seqf ; Functor=candf ; Functor=orf ; Functor=startsf ; 
+	  Functor=finishf ; Functor=meets ),
+	(Label \= unlabeled -> 
+		(write_spaces(I),write(Label),write(' rule:'),nl); true ),
+	write_spaces(I),
+	write(Functor),write('('),nl,
+	I1 is I+1,
+	write_justification_internal(I1,J2),
+	write_spaces(I),
+	write(','),nl,
+	write_justification_internal(I1,J3),
+	write_spaces(I),
+	write(')'),nl,
+	write_spaces(I),writeN(20,'-'),nl,
+	write_spaces(I),
+	write(event(Event,[T1,T2])),nl,
+	!.
+write_justification_internal(I,justification(Label,head(Event,[T1,T2]),E)):-
+	E =.. [aggregate,Functor,J2,J3],
+	( Functor=seqf ; Functor=candf ; Functor=orf ; Functor=startsf ; 
+	  Functor=finishf ; Functor=meets ),
+	(Label \= unlabeled -> 
+		(write_spaces(I),write(Label),write(' rule:'),nl); true ),
+	write_spaces(I),
+	write('aggregate('),write(Functor),write(','),nl,
+	I1 is I+1,
+	write_justification_internal(I1,J2),
+	write_spaces(I),
+	write(','),nl,
+	write_justification_internal(I1,J3),
+	write_spaces(I),
+	write(')'),nl,
+	write_spaces(I),writeN(20,'-'),nl,
+	write_spaces(I),
+	write(event(Event,[T1,T2])),nl,
+	!.
+write_justification_internal(I,justification(Label,head(Event,[T1,T2]),J2)):-
+	(Label \= unlabeled -> 
+		(write_spaces(I),write(Label),write(' rule:'),nl); true ),
+	I1 is I+1,
+	write_justification_internal(I1,J2),
+	write_spaces(I),writeN(20,'-'),nl,
+	write_spaces(I),
+	write(event(Event,[T1,T2])),nl,
+	!.
+write_justification_internal(I,J):-
+	write_spaces(I),write(J),nl,
+	!.
+
+% write_justification_list_internal/2
+write_justification_list_internal(_I1,[]):-
+	!.
+write_justification_list_internal(I,[H]):-
+	write_justification_internal(I,H),	
+	!.
+write_justification_list_internal(I,[H|T]):-
+	write_justification_internal(I,H),
+	I1 is I-1,write_spaces(I1),write(','),nl,
+	write_justification_list_internal(I,T),
+	!.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% write_justification_udraw/2
+%  writes justification keeping some meaningful indentation
+write_justification_udraw(Q,J,FileName):-
+	open(FileName,write,FileHandler),
+	write(FileHandler,'[l("'),
+	write(FileHandler,Q),
+	write(FileHandler,'",n("'),
+	write(FileHandler,Q),
+	write(FileHandler,'",[a("OBJECT","'),
+	write(FileHandler,Q),
+	write(FileHandler,'")],['),
+	write_justification_internal_udraw(FileHandler,0,J),
+	write(FileHandler,']))]'),
+	close(FileHandler),
+	!.
+
+% write_justification_internal_udraw/2
+write_justification_internal_udraw(FileHandler,_I,
+		justification(unlabeled,head(Event,[T1,T2]),
+		default)):-
+	write(FileHandler,'e("Edge",[],l("'),
+	write(FileHandler,event(Event,[T1,T2])),
+	write(FileHandler,'",n("'),
+	write(FileHandler,event(Event,[T1,T2])),
+	write(FileHandler,'",[a("OBJECT","'),
+	write(FileHandler,event((Event,[T1,T2]))),
+	write(FileHandler,'")],['),
+	write(FileHandler,'])))'),
+	!.
+write_justification_internal_udraw(FileHandler,_I,
+		justification(unlabeled,head(Event,[T1,T2]),
+		failed)):-
+	write(FileHandler,'e("Edge",[],l("'),
+	write(FileHandler,failed(event(Event,[T1,T2]))),
+	write(FileHandler,'",n("'),
+	write(FileHandler,failed(event(Event,[T1,T2]))),
+	write(FileHandler,'",[a("OBJECT","'),
+	write(FileHandler,failed(event(Event,[T1,T2]))),
+	write(FileHandler,'")],['),
+	write(FileHandler,'])))'),
+	!.
+write_justification_internal_udraw(FileHandler,I,L):-
+	is_list(L),
+	write(FileHandler,'e("Edge",[],l("'),
+	write(FileHandler,'failed forall rules'),
+	incCounter(udraw),
+	counter(udraw,V),
+	write(FileHandler,' '),
+	write(FileHandler,V),
+	write(FileHandler,'",n("'),
+	write(FileHandler,'failed forall rules'),
+	write(FileHandler,' '),
+	write(FileHandler,V),
+	write(FileHandler,'",[a("OBJECT","'),
+	write(FileHandler,'failed forall rules'),
+	write(FileHandler,' '),
+	write(FileHandler,V),
+	write(FileHandler,'")],['),
+	I1 = I,
+	write_justification_list_internal_udraw(FileHandler,I1,L),
+	write(FileHandler,'])))'),
+	!.
+write_justification_internal_udraw(FileHandler,I,
+		justification(Label,head(Event,[T1,T2]),
+		failed(J2))):-
+	I1 = I,
+	write(FileHandler,'e("Edge",[],l("'),
+	(Label \= unlabeled -> 
+		(	write(FileHandler,Label),
+		write(FileHandler,' rule:'),
+		write(FileHandler,'\n')); true ),
+	write(FileHandler,'failed'),
+	write(FileHandler,' '),
+	write(FileHandler,event(Event,[T1,T2])),
+	incCounter(udraw),
+	counter(udraw,V),
+	write(FileHandler,' '),
+	write(FileHandler,V),
+	write(FileHandler,'",n("'),
+	(Label \= unlabeled -> 
+		(	write(FileHandler,Label),
+		write(FileHandler,' rule:'),
+		write(FileHandler,'\n')); true ),
+	write(FileHandler,'failed'),
+	write(FileHandler,' '),
+	write(FileHandler,event(Event,[T1,T2])),
+	counter(udraw,V),
+	write(FileHandler,' '),
+	write(FileHandler,V),
+	write(FileHandler,'",[a("OBJECT","'),
+	(Label \= unlabeled -> 
+		(	write(FileHandler,Label),
+		write(FileHandler,' rule:'),
+		write(FileHandler,'\n')); true ),
+	write(FileHandler,'failed'),
+	write(FileHandler,event(Event,[T1,T2])),
+	counter(udraw,V),
+	write(FileHandler,' '),
+	write(FileHandler,V),
+	write(FileHandler,'")],['),
+	write_justification_internal_udraw(FileHandler,I1,J2),
+	write(FileHandler,'])))'),
+	!.
+write_justification_internal_udraw(FileHandler,_I,
+		justification(Label,head(Event,[T1,T2]),E)):-
+	E =.. [Functor,J2,J3],
+	( Functor=seqf ; Functor=candf ; Functor=orf ; Functor=startsf ; 
+	  Functor=finishf ; Functor=meets ),
+	write(FileHandler,'e("Edge",[],l("'),
+	write(FileHandler,event(Event,[T1,T2])),
+	write(FileHandler,'='),
+	(Label \= unlabeled -> 
+		(	write(FileHandler,Label),
+		write(FileHandler,' rule:'),
+		nl); true ),
+	write(FileHandler,Functor),
+	write(FileHandler,'",n("'),
+	write(FileHandler,event(Event,[T1,T2])),
+	write(FileHandler,'='),
+	(Label \= unlabeled -> 
+		(	write(FileHandler,Label),
+		write(FileHandler,' rule:'),
+		nl); true ),
+	write(FileHandler,Functor),
+	write(FileHandler,'",[a("OBJECT","'),
+	(Label \= unlabeled -> 
+		(	write(FileHandler,Label),
+		write(FileHandler,' rule:'),
+		nl); true ),
+	write(FileHandler,Functor),
+	write(FileHandler,'")],['),
+	write_justification_internal_udraw(FileHandler,I1,J2),
+	write(FileHandler,','),
+	write_justification_internal_udraw(FileHandler,I1,J3),
+	write(FileHandler,'])))'),
+	!.
+write_justification_internal_udraw(FileHandler,I,
+		justification(Label,head(Event,[T1,T2]),J2)):-
+	write(FileHandler,'e("Edge",[],l("'),
+	(Label \= unlabeled -> 
+		(	write(FileHandler,Label),
+		write(FileHandler,' rule:'),
+		write(FileHandler,'\n')); true ),
+	I1 = I,
+	write(FileHandler,event(Event,[T1,T2])),
+	write(FileHandler,'",n("'),
+	(Label \= unlabeled -> 
+		(	write(FileHandler,Label),
+		write(FileHandler,' rule:'),
+		write(FileHandler,'\n')); true ),
+	write(FileHandler,event(Event,[T1,T2])),
+	write(FileHandler,'",[a("OBJECT","'),
+	(Label \= unlabeled -> 
+		(	write(FileHandler,Label),
+		write(FileHandler,' rule:'),
+		write(FileHandler,'\n')); true ),
+	write(FileHandler,event(Event,[T1,T2])),
+	write(FileHandler,'")],['),
+	write_justification_internal_udraw(FileHandler,I1,J2),
+	write(FileHandler,'])))'),
+	!.
+write_justification_internal_udraw(FileHandler,_I,J):-
+	write(FileHandler,'e("Edge",[],l("'),
+	write(FileHandler,J),
+	write(FileHandler,'",n("'),
+	write(FileHandler,J),
+	write(FileHandler,'",[a("OBJECT","'),
+	write(FileHandler,J),
+	write(FileHandler,'")],['),
+	write(FileHandler,'])))'),
+	!.
+
+% write_justification_list_internal_udraw/3
+write_justification_list_internal_udraw(_FileHandler,_I1,[]):-
+	!.
+write_justification_list_internal_udraw(FileHandler,I,[H]):-
+	write_justification_internal_udraw(FileHandler,I,H),	
+	!.
+write_justification_list_internal_udraw(FileHandler,_I,[H|T]):-
+	write_justification_internal_udraw(FileHandler,I,H),
+	%I1 = I,
+	write(FileHandler,','),
+	write_justification_list_internal_udraw(FileHandler,I,T),
+	!.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% write_spaces/1
+write_spaces(I):-
+	Spaces is I*8,
+	writeN(Spaces,' ').
+
+% writeN/2
+%  write N of C
+writeN(N,C) :-
+	( N > 0 ->
+	    M is N - 1,
+	    write(C),
+	    writeN(M,C)
+	;
+	    true
+	).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% write_spaces/2
+write_spaces(FileHandler,I):-
+	Spaces is I*8,
+	writeN(FileHandler,Spaces,' ').
+
+% writeN/3
+%  write N of C in file FileHandler
+writeN(FileHandler,N,C) :-
+	( N > 0 ->
+	    M is N - 1,
+	    write(FileHandler,C),
+	    writeN(FileHandler,M,C)
+	;
+	    true
+	).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+compare_results(R1,R2,Intersection,Dif1,Dif2):-
+	set_intersection(R1,R2,Intersection),
+	set_difference(R1,R2,Dif1),
+	set_difference(R2,R1,Dif2),
+	!.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

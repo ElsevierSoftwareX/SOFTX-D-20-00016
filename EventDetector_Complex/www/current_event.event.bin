@@ -1,0 +1,2 @@
+eventClause(complexEvent0, seq(t1, temp_e_3(t2, t3))).
+eventClause(temp_e_3(t2, t3), seq(t2, t3)).

@@ -1,0 +1,125 @@
+ETALIS
+
+ETALIS is an engine for event processing and reactivity handling. The engine enables logic-based and data-driven complex event processing. ETALIS is based on backward chaining of rules, which also allows very efficient deductive reasoning of complex events, situations and events-triggered actions. 
+
+Please note that ETALIS is under continuous development, and this document --intended to be the user manual-- reflects the current state of our system. The ETALIS source code is available for portability and extensibility under the GNU General Public Library License.
+
+1. Getting Started with ETALIS
+1.1 Installing ETALIS under UNIX and Windows
+ETALIS runs on many Prolog systems. We tested it under XSB, SWI, YAP and SICStus. Some features (i.e., the delayed alarm event triggers) can only be used under SWI. We recommend downloading SWI from: http://www.swi-prolog.org/download/stable . SWI version 5.8.0 has the alarm predicates used by us, while older version do not support these calls).
+
+Download ETALIS from: http://code.google.com/p/ETALIS/source/checkout using Subversion.
+Note that Linux distributions have installations of Subversion "svn" programs, while for Windows, we recommend using either the svn command line from http://subversion.apache.org/packages.html or "TortoiseSVN" from http://tortoisesvn.tigris.org or the Subclipse plugin in Eclipse.
+
+Start your favorite prolog system and load the ETALIS program: "['src/ETALIS.P']." or "consult('src/ETALIS.P')." in the ETALIS home directory or "consult('$PATH/ETALIS.P')." where $PATH is either the absolute path to "ETALIS.P" or the relative path to "ETALIS.P" from your current location.
+
+1.2 Setup compiling and execution flags in ETALIS with:
+ set_ETALIS_flag(FlagName,Value)
+where FlagName is of of the following:
+- logging: enables logging. Can have the values: "on" or "off"
+- logging_to_file : enable logging to an external file , can take values: "on" or "off". Use write_log/2 (in utils.P) to log an event to a file.
+- out_of_order: enables detection of events out out of order. Can have the values: "on" or "off". 
+- garbage_clt: enables garbage collection: events older than 3min are collected to be sent to garbage. Can have the values: "on" or "off". 
+- windowsvalue: used together with garbage_clt by specifying the value for the garbage window collection. Can have the numaric values in minutes
+- event_consumption_policy: sets the event consumtpion policy. Can be: "recent", "chronological" and "unrestricted".
+
+1.3 Compile Event file with:
+ compile_event_file(EventFile)
+where EventFile is a file that contains the event rules defined according to the language specification
+
+An example event program:
+
+trade(StockId) <- tick(StockId,Price) where check_condition(StockId,Price).
+check_condition(StockId,Price) :-
+       database_treashhold(StockId,Threadhold),
+       Threadhold > Price.
+
+The first rule above is a composed event rule using "<-".
+The second rule is Prolog rule using ":-".
+The event and Prolog rules can be mixed in programs.
+
+1.4 Execute events:
+	event(E) - executes an event in the current datime moment
+	event(E,[Datime1,Datime2]) - executes an event in the datime interval
+	event(E,datime(Y,M,D,H,Min,S)) - executes an event in the datime moment given as an argument
+	execute_event_stream_file(EventStreamFile) - execute an entire file of events defined as above (i.e., "event(E)", "event(E,datime(Y,M,D,H,Min,S))" or "event(E,[Datime1,Datime2])").
+
+1.5 Spying events
+	spy_event(Event/Arity) - stops execution and switches to prolog debug when an event of the specified type is encountered
+
+--------------------------------------
+2. Notes for the interface for ETALIS from another language:
+
+First of all, ETALIS works with different Prolog systems: SWI, Yap,
+XSB and Sicstus Prolog.
+
+You should contact these systems mailing lists to tell you how to connect
+from external languages, such as, Java, C, C#.
+For instance, the mailing list SWI Prolog is here:
+https://mailbox.iai.uni-bonn.de/mailman/listinfo.cgi/swi-prolog
+To post new messages, please send mail to mailto:swi-prolog@iai.uni-bonn.de
+
+Please use news:comp.lang.prolog
+http://groups.google.com/group/comp.lang.prolog/topics
+for general Prolog questions.
+
+2.1 General instructions on how to connect to ETALIS from an external language:
+- In the external language (Java or C#), start a SWI Prolog engine and keep it 
+into a list/pool of running engines (sessionID,enginePointer)
+- this engine should load ETALIS in SWI Prolog:
+ ['src/ETALIS.P'].
+you can set to store fired events:
+ set_ETALIS_flag(store_fired_events_java,on)
+because you want in the end to see what events were triggered in ETALIS.
+Although this flag has "java" in the name, it applies to all external 
+languages.
+
+To load an event program from the external language into ETALIS, there are two options:
+
+- save the event program into a file and call compile_event_file(File), or
+- send the rules to ETALIS using compile_event_rules( [ RawEventRules ] )
+
+To ensure that the current program is the only one that the current ETALIS engine uses, first, you should call: "reset_ETALIS." in the Prolog system, whic is a predicate in ETALIS that resets ETALIS completely by deleting all event rules and all partial goals from memory. 
+
+For the second option of compiling the rules from the external language, parse the input program and split it on '.' dots (i.e., the end of predicates), put them all into a list and call: compile_event_rules( [ RawEventRules ] )
+
+To fire a stream of events from the external language into ETALIS, the user should call "reset_db" in ETALIS to delete all the partial goals from memory.
+
+The stream of events should be parsed and split it on '.' dots (so you have an array with event calls), eliminate the last string after the last dot (empty
+string), and put them all in a Prolog list and call:
+ fire_event_list_return_external_events([EventList], OutputList)
+and collect the results from OutputList.
+Repeat this operation for all your events and event streams.
+
+Finish ETALIS with "halt" in Prolog.
+
+2.2 Specific instructions for connecting to ETALIS from Java:
+
+Each one of the Prolog systems that we use has different interfaces from Java:
+- SWI has two: JPL and InterProlog
+- Yap has one: InterProlog
+- XSB has one: InterProlog
+- Sicstus has one: PrologBeans
+
+Notes for Java interfaces for SWI Prolog:
+- Interprolog
+http://www.declarativa.com/interprolog/
+interprolog@declarativa.com
+- JPL (supports a single Prolog engine at a time in Java)
+http://www.swi-prolog.org/packages/jpl/
+http://www.swi-prolog.org/Mailinglist.html
+
+The simplest way to connect to SWI from Java with Interprolog is to install SWI and add the path to the SWI executable (e.g., "c:\Program Files\pl\bin\plcon.exe" in Windows) in the environment varible PATH.
+In Linux, you cna do this by adding the following to your .bashrc file 
+export PATH=/path_to_SWIBIN:$PATH
+and
+export SWI_BIN_DIRECTORY=/path_to_SWIBIN
+
+For the Eclipse framework, add the path to the directory containing th executable SWI in the current classpath by using Window menu\Preferences\Java\BuildPath\ClasspathVariables\New (give it
+any name and the directories you want to add to classpath)
+
+Please also put interprolog.jar in the CLASSPATH variable.
+
+Please contact Paul Fodor <pfodor@cs.stonybrook.edu> and Darko Anicic <darko.anicic@fzi.de> for any problems with the execution of the ETALIS programs.
+
+

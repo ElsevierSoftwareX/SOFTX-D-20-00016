@@ -1,0 +1,267 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+:- dynamic(trClause/3).
+
+% event_trigger(+Event)
+% executes an event and triggers all actions and complex events triggerd by
+%  this event
+
+event_trigger(not_etr_dbf(Label,A)):-
+        log(not_etr_dbf(Label,A)),
+        \+( etr_dbf(Label,A) ).
+
+event_trigger(etr_dbf(Label,A)):- % event transaction logic db calls
+        log(etr_dbf(Label,A)),
+        etr_dbf(Label,A).
+
+event_trigger(etr_insf(Label,A)):-
+        log(etr_insf(Label,A)),
+        etr_insf(Label,A).
+
+event_trigger(etr_delf(Label,A)):-
+        log(etr_delf(Label,A)),
+        etr_delf(Label,A).
+
+event_trigger(check_event_rule_conditions(Label,Head,DT)):-
+        log(check_event_rule_conditions(Label,Head,DT)),
+        check_event_rule_conditions(Label,Head,DT).
+
+event_trigger(db(A)):- % db calls
+        log(db(A)),
+        call(A).
+
+event_trigger(db(db(A))):- % db calls
+        log(db(A)),
+        call(A).
+
+% exceptionAlarm/2
+%  triggers an event in a certain perios of time
+%       Duration can be given in seconds
+event_trigger(event(exceptionAlarm(A,Duration),[T1,T2])):-
+        \+(prolog_backend(swi)),
+        log(exceptionAlarm(A,Duration)),
+        T2 = datime(Y2,M2,D2,H2,Min2,S2,_Counter),
+        datime_plus_sec(datime(Y2,M2,D2,H2,Min2,S2),Duration,
+                datime(Y3,M3,D3,H3,Min3,S3)),
+        Datime3=datime(Y3,M3,D3,H3,Min3,S3,0), % added counter
+        event_trigger(event(A,[T1,Datime3])).
+
+event_trigger(event(exceptionAlarm(A,Duration),[T1,T2])):-
+        prolog_backend(swi),
+        log(exceptionAlarm(A,Duration)),
+        (
+                T2 = datime(Y2,M2,D2,H2,Min2,S2,_Counter);
+                T2 = datime(Y2,M2,D2,H2,Min2,S2)
+        ),
+        datime_plus_sec(datime(Y2,M2,D2,H2,Min2,S2),Duration,
+                datime(Y3,M3,D3,H3,Min3,S3)),
+        Datime3=datime(Y3,M3,D3,H3,Min3,S3,0), % added counter
+        % SWI only: calls event check in the future
+        % 10 min is a reasonable limit for alarm
+        ( (0<Duration,Duration=<600)
+        -> alarm(Duration,event_trigger(event(A,[T1,Datime3])),_Id) ;
+        true).
+
+% exceptionAlarmAbsoluteDatime/2
+%  triggers an event at an absolute time
+%       Duration can be given in seconds or in datime
+event_trigger(event(exceptionAlarmAbsoluteDatime(A,Datime),[T1,_T2])):-
+        \+(prolog_backend(swi)),
+        log(exceptionAlarmAbsoluteDatime(A,Datime)),
+        Datime = datime(Y,M,D,H,Min,S), LabelDatime=datime(Y,M,D,H,Min,S,0),
+        event_trigger(event(A,[T1,LabelDatime])).
+
+event_trigger(event(exceptionAlarmAbsoluteDatime(A,Datime),[T1,_T2])):-
+        prolog_backend(swi),
+        log(exceptionAlarmAbsoluteDatime(A,Datime)),
+        Datime = datime(Y,M,D,H,Min,S), LabelDatime=datime(Y,M,D,H,Min,S,0),
+        current_datime(CurrentDatime),
+        datime_minus_datime(Datime,CurrentDatime,Duration),
+        % nl,nl,write(Duration),nl,nl,
+        % it's just too much for SWI to wait over 10 min
+        (Duration>=600 -> Duration1=600 ;
+                ( 0<Duration -> Duration1=Duration ; Duration1=1 )),
+        % SWI only: calls event check in the future
+        alarm(Duration1,event_trigger(event(A,[T1,LabelDatime])),_Id).
+
+event_trigger(event(prolog(A))):-
+        log(prolog(A)),
+        call(A).
+
+event_trigger(prolog(A)):-
+        log(prolog(A)),
+        call(A).
+
+event_trigger(less(T1,T2)):-
+        log(less(T1,T2)),
+        less_datime(T1,T2).
+
+event_trigger(less_eq(T1,T2)):-
+        log(less_eq(T1,T2)),
+        less_datime(T1,T2);
+        equal_datime(T1,T2).
+
+event_trigger(equal(T1,T2)):-
+        log(equalTimes(T1,T2)),
+        equal_datime(T1,T2).
+
+event_trigger(min(T1,T2,T3)):-
+        less_datime(T1,T2) -> T3 = T1 ; T3 = T2.
+
+event_trigger(max(T1,T2,T3)):-
+        less_datime(T1,T2) -> T3 = T2 ; T3 = T1.
+
+event_trigger(seqf(etr_dbf(Label,E11),E2)):-
+        event_consumption_policy(unrestricted),
+        E1 = etr_dbf(Label,E11),
+        findall(E1,call(E1),L),
+        trigger_all(L,seqf(E1,E2)).
+
+event_trigger(seqf(E1,E2)):-
+        \+((E1 = etr_dbf(_Label,_E11), event_consumption_policy(unrestricted))),
+        log(seqf(E1,E2)),
+        event_trigger(E1),
+        event_trigger(E2).
+
+event_trigger(forall_seqf(etr_dbf(Label,E11),E2)):-
+        get_etalis_flag(event_consumption_policy,Old),
+        set_etalis_flag(event_consumption_policy,unrestricted),
+        E1 = etr_dbf(Label,E11),
+        findall(E1,call(E1),L),
+        set_etalis_flag(event_consumption_policy,Old),
+        trigger_all(L,seqf(E1,E2)).
+
+event_trigger(wheref(db(E1),E2)):-
+        log(wheref(db(E1),E2)),
+        event_trigger(db(E1)),
+        event_trigger(E2).
+
+event_trigger(dof(db(E1),E2)):-
+        log(dof(db(E1),E2)),
+        event_trigger(db(E1)),
+        event_trigger(E2).
+
+event_trigger(event_multiplyf(db(E1),E2)):-
+        findall(E1,call(E1),L),
+        trigger_all(L,event_multiplyf(db(E1),E2)).
+
+event_trigger(tor(E1,E2)) :-
+        log(tor(E1,E2)),
+        (
+                event_trigger(E1);
+                event_trigger(E2)
+        ).
+
+event_trigger(event(constrainedEvent(Event,Constraints),[T1,T2])):-
+        log(checkConstraints(event(Event,[T1,T2]),Constraints)),
+        checkConstraints(Constraints,[T1,T2]),
+        log(event(Event,[T1,T2])),
+        findall(Body,trClause(_Label,event(Event,[T1,T2]),Body),List),
+        fireAllTRFormulas(List).
+
+event_trigger(event(Event,[T1,T2])):-
+        % no event rule matches the current event
+        \+(trClause(_Label,event(Event,[T1,T2]),_Body)),
+        assert(fired_event(Event,[T1,T2])),
+        logging_external_event(event(Event,[T1,T2])).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%event_trigger(event(Event,[T1,T2]))
+event_trigger(event(Event,[T1,T2])):-
+        event_consumption_policy(recent),
+        % fire all rules to which the event contributes
+        assert(fired_event(Event,[T1,T2])),
+        %seeDB,
+        findall(Body,trClause(_Label,event(Event,[T1,T2]),Body),List),
+        logging_external_event(event(Event,[T1,T2])),
+        fireAllTRFormulas(List).
+
+event_trigger(event(Event,[T1,T2])):-
+        event_consumption_policy(chronological),
+        % fire all rules to which the event contributes
+        assert(fired_event(Event,[T1,T2])),
+        %seeDB,
+        findall(Body,trClause(_Label,event(Event,[T1,T2]),Body),List),
+        logging_external_event(event(Event,[T1,T2])),
+        fireAllTRFormulas(List).
+
+event_trigger(event(Event,[T1,T2])):-
+        event_consumption_policy(unrestricted),
+        % fire all rules to which the event contributes
+        assert(fired_event(Event,[T1,T2])),
+        %seeDB,
+        findall(Body,trClause(_Label,event(Event,[T1,T2]),Body),List),
+        logging_external_event(event(Event,[T1,T2])),
+        fireAllTRFormulas(List).
+
+% trigger_all([H|T],event_multiplyf(db(E1),E2))
+trigger_all([],_).
+trigger_all([H|T],event_multiplyf(db(E1),E2)):-
+        log(event_multiplyf(db(E1),E2)),
+        log(db(E1)),
+        copy_term(event_multiplyf(db(E1),E2),event_multiplyf(db(CE1),CE2)),
+        CE1 = H,
+        ((event_trigger(CE2),!);true),
+        trigger_all(T,event_multiplyf(db(E1),E2)).
+trigger_all([H|T],seqf(E1,E2)):-
+        log(seqf(E1,E2)),
+        log(E1),
+        copy_term(seqf(E1,E2),seqf(CE1,CE2)),
+        CE1 = H,
+        ((event_trigger(CE2),!);true),
+        trigger_all(T,seqf(E1,E2)).
+
+%% fireAllTRFormulas(+List)
+fireAllTRFormulas([H|T]):-
+        fire_event(H),
+        fireAllTRFormulas(T).
+fireAllTRFormulas([]).
+fire_event(H):-
+        event_trigger(H),
+        !.
+fire_event(_H). % for the failed events to succeed
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% check if Event is defined as an external trigger
+external_trigger_check(Event):-
+        functor(Event,Functor,_Arity1),
+        % users mistake sometimes the arity of events, but they might still want
+        % to see them - note: we can put here a hook to offer the alternative
+        external_trigger(Functor/_Arity2),
+        !.
+external_trigger_check(Event):-
+        external_trigger(Event).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% checkConstraints(Constraints,[T1,T2])
+%  old version of etalis that had a specific constraints for events: startTime
+%       (an event has a specific start time), etc.
+checkConstraints(Constraints,[T1,_T2]) :-
+        my_member(startTime(S),Constraints),
+        less_datime(T1,S),
+        fail.
+checkConstraints(Constraints,[_T1,T2]) :-
+        my_member(endTime(E),Constraints),
+        less_datime(E,T2),
+        fail.
+checkConstraints(Constraints,[_T1,T2]) :-
+        my_member(startTime(datime(S_Y,S_M,S_D,S_H,S_Min,S_S,S_Counter)),
+                Constraints),
+        absoluteTime(datime(S_Y,S_M,S_D,S_H,S_Min,S_S,S_Counter),
+                S_AbsoluteTime),
+        absoluteTime(T2,T2_AbsoluteTime),
+        my_member(duration(Duration),Constraints),
+        E_AbsoluteTime is S_AbsoluteTime+Duration,
+        T2_AbsoluteTime > E_AbsoluteTime,
+        fail.
+checkConstraints(Constraints,[T1,T2]) :-
+        \+( my_member(startTime(datime(_Y,_M,_D,_H,_Min,_S,_Counter)),
+                Constraints) ),
+        absoluteTime(T1,T1_AbsoluteTime),
+        absoluteTime(T2,T2_AbsoluteTime),
+        my_member(duration(Duration),Constraints),
+        E_AbsoluteTime is T1_AbsoluteTime+Duration,
+        T2_AbsoluteTime > E_AbsoluteTime,
+        fail.
+checkConstraints(_Constraints,[_T1,_T2]).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

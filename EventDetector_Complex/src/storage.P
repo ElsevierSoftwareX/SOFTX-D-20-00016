@@ -1,0 +1,333 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% storage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+:- dynamic(db/1). % fixed database
+:- dynamic(fired_event/2). % fired event + time interval
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% TR backtrackable updates for event processing
+% for many operands (i.e., 'seq', 'par', etc.) we can transform the 'goal'/3
+%       into a beter indexed goal 'etr_db/5' for unlabeled rules
+:- dynamic(etr_db/5).
+%       or into a beter indexed goal 'etr_db/6' for labeled rules
+:- dynamic(etr_db/6).
+%:- index(etr_db(1,1,1,1,1,1)). % prolog_backend(swi))
+% for any other goal (i.e., star_goal, etc.) we use the standard
+:- dynamic(etr_db/1).
+
+% seeDB
+seeDB:-
+        findall(etr_db(T2,T1,B,A,C),etr_db(T2,T1,B,A,C),L),
+        nl, write('See database: '),
+        write(L),nl,nl,
+        findall(etr_db(SG),etr_db(SG),L2),
+        write(L2),nl,nl.
+
+% reset_db/0
+reset_db:-
+        retractall(etr_db(_T2,_T1,_B,_A,_C)).
+
+% etr_dbf/1
+% etr_dbf(unlabeled,+Data)
+%       checks if the data is in the database
+etr_dbf(unlabeled,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(recent),
+        !,
+        etr_db(T2,T1,B,A,C).
+etr_dbf(unlabeled,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(chronological),
+        !,
+        etr_db(T2,T1,B,A,C).
+etr_dbf(unlabeled,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(unrestricted),
+        etr_db(T2,T1,B,A,C).
+% for labeled rules
+etr_dbf(Label,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(recent),
+        !,
+        etr_db(T2,T1,B,A,C,Label).
+etr_dbf(Label,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(chronological),
+        !,
+        etr_db(T2,T1,B,A,C,Label).
+etr_dbf(Label,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(unrestricted),
+        etr_db(T2,T1,B,A,C,Label).
+% other goals than 'goal/3'
+etr_dbf(unlabeled,Goal):-
+        event_consumption_policy(recent),
+        !,
+        etr_db(Goal).
+etr_dbf(unlabeled,Goal):-
+        event_consumption_policy(chronological),
+        !,
+        etr_db(Goal).
+etr_dbf(unlabeled,Goal):-
+        event_consumption_policy(unrestricted),
+        etr_db(Goal).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% event_consumption_policy(recent)
+etr_insf(unlabeled,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(recent),
+        etr_db(T2,T1,B,A,C),
+        !,
+        fail.
+etr_insf(unlabeled,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(recent),
+        %\+( etr_db(T2,T1,B,A,C) ),
+        asserta(etr_db(T2,T1,B,A,C)). % add goal at begining for recent
+etr_insf(unlabeled,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(recent),
+        retract(etr_db(T2,T1,B,A,C)),
+        !,
+        fail.
+% for labeled rules
+etr_insf(Label,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(recent),
+        etr_db(T2,T1,B,A,C,Label),
+        !,
+        fail.
+etr_insf(Label,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(recent),
+        %\+( etr_db(T2,T1,B,A,C,Label) ),
+        asserta(etr_db(T2,T1,B,A,C,Label)). % add goal at begining for recent
+etr_insf(Label,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(recent),
+        retract(etr_db(T2,T1,B,A,C,Label)),
+        !,
+        fail.
+% other goals than 'goal/3'
+etr_insf(unlabeled,Goal):-
+        event_consumption_policy(recent),
+        etr_db(Goal),
+        !,
+        fail.
+etr_insf(unlabeled,Goal):-
+        event_consumption_policy(recent),
+        %\+( etr_db(Goal) ),
+        asserta(etr_db(Goal)). % add goal at begining for recent
+etr_insf(unlabeled,Goal):-
+        event_consumption_policy(recent),
+        retract(etr_db(Goal)),
+        !,
+        fail.
+
+% event_consumption_policy(chronological)
+etr_insf(unlabeled,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(chronological),
+        etr_db(T2,T1,B,A,C),
+        !,
+        fail.
+etr_insf(unlabeled,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(chronological),
+        %\+( etr_db(T2,T1,B,A,C) ),
+        assertz(etr_db(T2,T1,B,A,C)). % add goal at end for chronological
+etr_insf(unlabeled,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(chronological),
+        retract(etr_db(T2,T1,B,A,C)),
+        !,
+        fail.
+% for labeled rules
+etr_insf(Label,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(chronological),
+        etr_db(T2,T1,B,A,C,Label),
+        !,
+        fail.
+etr_insf(Label,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(chronological),
+        %\+( etr_db(T2,T1,B,A,C,Label) ),
+        assertz(etr_db(T2,T1,B,A,C,Label)). % add goal at end for chronological
+etr_insf(Label,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(chronological),
+        retract(etr_db(T2,T1,B,A,C,Label)),
+        !,
+        fail.
+% other goals than 'goal/3'
+etr_insf(unlabeled,Goal):-
+        event_consumption_policy(chronological),
+        etr_db(Goal),
+        !,
+        fail.
+etr_insf(unlabeled,Goal):-
+        event_consumption_policy(chronological),
+        %\+( etr_db(Goal) ),
+        assertz(etr_db(Goal)). % add goal at end for chronological
+etr_insf(unlabeled,Goal):-
+        event_consumption_policy(chronological),
+        retract(etr_db(Goal)),
+        !,
+        fail.
+
+% event_consumption_policy(unrestricted)
+etr_insf(unlabeled,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(unrestricted),
+        etr_db(T2,T1,B,A,C),
+        !,
+        fail.
+etr_insf(unlabeled,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(unrestricted),
+        %\+( etr_db(T2,T1,B,A,C) ),
+        assertz(etr_db(T2,T1,B,A,C)).
+etr_insf(unlabeled,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(unrestricted),
+        retract(etr_db(T2,T1,B,A,C)),
+        !,
+        fail.
+% for labeled rules
+etr_insf(Label,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(unrestricted),
+        etr_db(T2,T1,B,A,C,Label),
+        !,
+        fail.
+etr_insf(Label,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(unrestricted),
+        %\+( etr_db(T2,T1,B,A,C,Label) ),
+        assertz(etr_db(T2,T1,B,A,C,Label)).
+etr_insf(Label,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(unrestricted),
+        retract(etr_db(T2,T1,B,A,C,Label)),
+        !,
+        fail.
+% other goals than 'goal/3'
+etr_insf(unlabeled,Goal):-
+        event_consumption_policy(unrestricted),
+        etr_db(Goal),
+        !,
+        fail.
+etr_insf(unlabeled,Goal):-
+        event_consumption_policy(unrestricted),
+        %\+( etr_db(Goal) ),
+        assertz(etr_db(Goal)).
+etr_insf(unlabeled,Goal):-
+        event_consumption_policy(unrestricted),
+        retract(etr_db(Goal)),
+        !,
+        fail.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% event_consumption_policy(recent)
+%etr_delf(unlabeled,goal(event(A),event(B,[T1,T2]),event(C))):-
+%               etr_db(T2,T1,B,A,C), !. %
+%       succeeds without consumption
+etr_delf(unlabeled,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(recent),
+        etr_db(T2,T1,B,A,C),
+        !,
+        (retract(etr_db(T2,T1,B,A,C));
+        (asserta(etr_db(T2,T1,B,A,C)),
+        !,
+        fail)).
+etr_delf(unlabeled,goal(event(_A),event(_B,[_T1,_T2]),event(_C))):-
+        event_consumption_policy(recent),
+        %\+( etr_db(T2,T1,B,A,C) ),
+        !,
+        fail.
+% for labeled rules
+etr_delf(Label,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(recent),
+        etr_db(T2,T1,B,A,C,Label),
+        !,
+        (retract(etr_db(T2,T1,B,A,C,Label));
+        (asserta(etr_db(T2,T1,B,A,C,Label)),
+        !,
+        fail)).
+etr_delf(_Label,goal(event(_A),event(_B,[_T1,_T2]),event(_C))):-
+        event_consumption_policy(recent),
+        !,
+        fail.
+% other goals than 'goal/3'
+etr_delf(unlabeled,Goal):-
+        event_consumption_policy(recent),
+        etr_db(Goal),
+        !,
+        (retract(etr_db(Goal));
+        (asserta(etr_db(Goal)),
+        !,
+        fail)).
+etr_delf(unlabeled,_Goal):-
+        event_consumption_policy(recent),
+        !,
+        fail.
+
+% event_consumption_policy(chronological)
+etr_delf(unlabeled,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(chronological),
+        etr_db(T2,T1,B,A,C),
+        !,
+        (retract(etr_db(T2,T1,B,A,C)); % add goal at end for chronological
+        (assertz(etr_db(T2,T1,B,A,C)),
+        !,
+        fail)).
+etr_delf(unlabeled,goal(event(_A),event(_B,[_T1,_T2]),event(_C))):-
+        event_consumption_policy(chronological),
+        !,
+        fail.
+% for labeled rules
+etr_delf(Label,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(chronological),
+        etr_db(T2,T1,B,A,C,Label),
+        !,
+        (retract(etr_db(T2,T1,B,A,C,Label)); % add goal at end for chronological
+        (assertz(etr_db(T2,T1,B,A,C,Label)),
+        !,
+        fail)).
+etr_delf(_Label,goal(event(_A),event(_B,[_T1,_T2]),event(_C))):-
+        event_consumption_policy(chronological),
+        !,
+        fail.
+% other goals than 'goal/3'
+etr_delf(unlabeled,Goal):-
+        event_consumption_policy(chronological),
+        etr_db(Goal),
+        !,
+        (retract(etr_db(Goal)); % add goal at end for chronological
+        (assertz(etr_db(Goal)),
+        !,
+        fail)).
+etr_delf(unlabeled,_Goal):-
+        event_consumption_policy(chronological),
+        !,
+        fail.
+
+% event_consumption_policy(unrestricted)
+etr_delf(unlabeled,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(unrestricted),
+        etr_db(T2,T1,B,A,C),
+        !,
+        (retract(etr_db(T2,T1,B,A,C));
+        (assertz(etr_db(T2,T1,B,A,C)),
+        !,
+        fail)).
+etr_delf(unlabeled,goal(event(_A),event(_B,[_T1,_T2]),event(_C))):-
+        event_consumption_policy(unrestricted),
+        !,
+        fail.
+% for labeled rules
+etr_delf(Label,goal(event(A),event(B,[T1,T2]),event(C))):-
+        event_consumption_policy(unrestricted),
+        etr_db(T2,T1,B,A,C,Label),
+        !,
+        (retract(etr_db(T2,T1,B,A,C,Label));
+        (assertz(etr_db(T2,T1,B,A,C,Label)),
+        !,
+        fail)).
+etr_delf(_Label,goal(event(_A),event(_B,[_T1,_T2]),event(_C))):-
+        event_consumption_policy(unrestricted),
+        !,
+        fail.
+% other goals than 'goal/3'
+etr_delf(unlabeled,Goal):-
+        event_consumption_policy(unrestricted),
+        etr_db(Goal),
+        !,
+        (retract(etr_db(Goal));
+        (assertz(etr_db(Goal)),
+        !,
+        fail)).
+etr_delf(unlabeled,_Goal):-
+        event_consumption_policy(unrestricted),
+        !,
+        fail.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

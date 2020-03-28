@@ -1,0 +1,45 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% TCP interface for event streams
+% ?- ['network_tcp_interface.P'].
+
+:- use_module(library(socket)).
+%:- use_module(library(unix)). % for fork/1 - not available on Windows
+:- use_module(library(streampool)).
+
+% ?- create_server(1600).
+create_server(Port):-
+        tcp_socket(Socket),
+        tcp_bind(Socket,Port),
+        tcp_listen(Socket,5), % 5 pending connection requests are allowed
+        tcp_open_socket(Socket,AcceptFd,_),
+        dispatch(AcceptFd).
+dispatch(AcceptFd):-
+        tcp_accept(AcceptFd,Socket,_Peer),
+        %fork(Pid),
+        (   true %Pid == child
+        ->
+                tcp_open_socket(Socket,In,Out),
+                % read a value from the socket
+                read(In,EventValue),
+                %call(EventValue),
+                write(EventValue),
+                % close streams
+                close(In),
+                close(Out)
+                %,halt
+        ;   (
+                tcp_close_socket(Socket)
+        )),
+        dispatch(AcceptFd).
+
+% ?- create_client(localhost,1600).
+create_client(Host,Port):-
+        tcp_socket(Socket),
+        tcp_connect(Socket,Host:Port),
+        tcp_open_socket(Socket,ReadFd,WriteFd),
+        % write test in the write stream
+        write(WriteFd,'event().'),
+        close(ReadFd),
+        close(WriteFd).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -1,0 +1,64 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% logging_TR_file(+InputFile,+TRRules)
+logging_TR_file(InputFile,TRRules):-
+        output_temporary_files(on),
+        !,
+        atom_concat(InputFile,'.ctr',TRFile),
+        open(TRFile,write,TRFileHandle),
+        write_TR_file(TRFileHandle,TRRules),
+        close(TRFileHandle).
+logging_TR_file(_InputFile,_TRRules).
+
+% write_TR_file(+TRFileHandle,+TRRules)
+write_TR_file(TRFileHandle,[H|T]):-
+        write(TRFileHandle,H),write(TRFileHandle,'.\n'),
+        write_TR_file(TRFileHandle,T),
+        !.
+write_TR_file(_TRFileHandle,[]).
+
+% assert_trRules/1
+assert_trRules([]).
+assert_trRules([H|T]):-
+        assert(H),
+        assert_trRules(T).
+
+:- dynamic(binary_event_rule/3).
+% assert_binary_event_rules/1
+assert_binary_event_rules([]).
+assert_binary_event_rules([eventClause(X,Y,Z)|T]):-
+        assert(binary_event_rule(X,Y,Z)),
+        assert_binary_event_rules(T).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+:- dynamic(event_consumption_policy/1).
+% used in storage.P
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+:- dynamic(external_trigger/1).
+% used in executor.P
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+:- dynamic(spy_event_pattern/1).
+spy_event(EventFunctor/Arity):-
+        debug,
+        build_list_vars(Arity,L),
+        EventPattern =.. [EventFunctor|L],
+        assert(spy_event_pattern(EventPattern)),
+        spy(spy_node),
+        !.
+
+build_list_vars(0,[]).
+build_list_vars(Arity,[_|T]):-
+        Arity1 is Arity-1,
+        build_list_vars(Arity1,T).
+
+spy_point(Event):-
+        spy_event_pattern(Event),
+        write('*Spy event: '), write(Event), nl,
+        spy_node,
+        !.
+spy_point(_Event).
+
+spy_node.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -1,0 +1,8 @@
+eventClause(avg(_G302, _G303), seq(temp_e_7(counter_compEvent(_G302, _G306), sum_compEvent(_G302, _G309)), prolog(_G303 is _G309/_G306))).
+eventClause(temp_e_7(counter_compEvent(_G302, _G306), sum_compEvent(_G302, _G309)), cand(counter_compEvent(_G302, _G306), sum_compEvent(_G302, _G309))).
+eventClause(sum_compEvent(_G175, _G176), seq(temp_e_6(temp_e_5(db(company(_G175)), start_compEvent), aggregate(sum(_G185), stock(_G175, _G185, _G189)^*, _G176)), stop_compEvent)).
+eventClause(temp_e_6(temp_e_5(db(company(_G175)), start_compEvent), aggregate(sum(_G185), stock(_G175, _G185, _G189)^*, _G176)), seq(temp_e_5(db(company(_G175)), start_compEvent), aggregate(sum(_G185), stock(_G175, _G185, _G189)^*, _G176))).
+eventClause(temp_e_5(db(company(_G175)), start_compEvent), seq(db(company(_G175)), start_compEvent)).
+eventClause(counter_compEvent(_G50, _G51), seq(temp_e_4(temp_e_3(db(company(_G50)), start_compEvent), aggregate(count, stock(_G50, _G61, _G62)^*, _G51)), stop_compEvent)).
+eventClause(temp_e_4(temp_e_3(db(company(_G50)), start_compEvent), aggregate(count, stock(_G50, _G61, _G62)^*, _G51)), seq(temp_e_3(db(company(_G50)), start_compEvent), aggregate(count, stock(_G50, _G61, _G62)^*, _G51))).
+eventClause(temp_e_3(db(company(_G50)), start_compEvent), seq(db(company(_G50)), start_compEvent)).

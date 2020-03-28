@@ -1,0 +1,20 @@
+	
+%Examples of complex event patterns in ETALIS:
+%=============================================
+
+%Sequence of events:
+complexEvent0 :- t1 * t2 * t3.
+
+%Concurrent (synchronous) composition of events:
+complexEvent1 :- (t2 * t4) # (t5 * t6).
+
+%Disjunction of events:
+complexEvent2 :- t0 \/ t1.
+
+%Sequence of events, combined with disjunction:
+complexEvent3 :- (t1 * t2 * t3) \/ (t4*t5).
+
+%Negation (with a sequence of events):
+complexEvent4 :- (t5 * t6) cnot t7.
+	
+	

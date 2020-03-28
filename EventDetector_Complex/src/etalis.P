@@ -1,0 +1,305 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Event processing
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  Modules:
+:- ['binarizer.P'].
+:- ['compiler.P'].
+:- ['date_time.P'].
+:- ['event_utils.P'].
+:- ['executor.P'].
+:- ['flags.P'].
+:- ['garbage_collection.P'].
+:- ['java_interface.P'].
+:- ['justify_etalis.P'].
+:- ['labeled_event_rules.P'].
+:- ['logging.P'].
+%:- ['network_tcp_interface.P'].
+:- ['parser.P'].
+:- ['storage.P'].
+:- ['utils.P'].
+
+% compile_event_file/1
+%  compiles an event file, parsing, binarization, transformation to
+%  transaction logic
+%?- compile_event_file('examples/event_test_01.event').
+% Parses the "event_test_01.event" file according to the syntax
+% Binarization (and also saves a file "event_test_01.event.bin" if the flag
+%       "logging(on)" is set)
+% Transformation to TR (and also saves a file "event_test_01.event.ctr" if the
+%       flag "logging(on)" is set)
+compile_event_file(InputFile):-
+	open(InputFile,read,InputHandle),
+        repeat_read(InputHandle,RawEventRules),
+	compile_event_rules(InputFile,RawEventRules),
+	close(InputHandle),
+	!.
+
+% compile_event_rules/1
+compile_event_rules(RawEventRules):-
+	\+ ( list(RawEventRules)),
+	nl,nl,write('Error: the input to the predicate '), 
+	write(compile_event_rules(RawEventRules)), 
+	write(' has to be a list!'), nl,nl,
+	!.
+compile_event_rules(RawEventRules):-
+	compile_event_rules('main',RawEventRules),
+	!.
+
+% compile_event_rules/2
+compile_event_rules(ModuleFileName,RawEventRules):-
+        ( etalis_module(OldModule,ExternalPred) ->
+		retractall(etalis_module(_,_)) ; OldModule=main ),
+        % parser.P
+        parse_event_rules(RawEventRules,ParsedEventRules),
+        % binarizer.P
+        binarization(ParsedEventRules,BinaryEventRules),
+        logging_binary_file(ModuleFileName,BinaryEventRules),
+        assert_binary_event_rules(BinaryEventRules),
+        % compiler.P
+        event2tr_transformation(BinaryEventRules,TRRules),
+        logging_TR_file(ModuleFileName,TRRules),
+        assert_trRules(TRRules),
+        % start garbage collector
+        start_garbage_collection,
+        ( OldModule = main -> true ;
+	        assert(etalis_module(OldModule,ExternalPred)) ),
+        !.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Execution:
+% event/1
+event(event(E,D)):-
+	!,
+        event(E,D).
+event(E):-
+        label_time_stamp(Datime),
+        event(E,[Datime,Datime]).
+
+% event/2
+event(E,[datime(Y1,M1,D1,H1,Min1,Sec1,Counter1),
+                datime(Y2,M2,D2,H2,Min2,Sec2,Counter2)]):-
+         % event_trigger is defined in executer.P
+        event_trigger(event(E,[datime(Y1,M1,D1,H1,Min1,Sec1,Counter1), 
+                datime(Y2,M2,D2,H2,Min2,Sec2,Counter2)])).
+event(E,[datime(Y1,M1,D1,H1,Min1,Sec1),datime(Y1,M1,D1,H1,Min1,Sec1)]):-
+        incCounter(timeCounter(datime(Y1,M1,D1,H1,Min1,Sec1))),
+        counter(timeCounter(datime(Y1,M1,D1,H1,Min1,Sec1)),Counter1),
+        Datime1 = datime(Y1,M1,D1,H1,Min1,Sec1,Counter1),
+        event_trigger(event(E,[Datime1,Datime1])).
+event(E,[datime(Y1,M1,D1,H1,Min1,Sec1),datime(Y2,M2,D2,H2,Min2,Sec2)]):-
+        incCounter(timeCounter(datime(Y1,M1,D1,H1,Min1,Sec1))),
+        counter(timeCounter(datime(Y1,M1,D1,H1,Min1,Sec1)),Counter1),
+        Datime1 = datime(Y1,M1,D1,H1,Min1,Sec1,Counter1),
+        incCounter(timeCounter(datime(Y2,M2,D2,H2,Min2,Sec2))),
+        counter(timeCounter(datime(Y2,M2,D2,H2,Min2,Sec2)),Counter2),
+        Datime2 = datime(Y2,M2,D2,H2,Min2,Sec2,Counter2),
+        event_trigger(event(E,[Datime1,Datime2])).
+event(E,[T1,T2]):-
+        event_trigger(event(E,[T1,T2])).
+event(E,T):-
+        number(T),
+        current_datime(datime(Y,M,D,H,Min,Sec)),
+        event_trigger(event(E,[datime(Y,M,D,H,Min,Sec,T),
+                datime(Y,M,D,H,Min,Sec,T)])).
+
+load_static_rules(InputFile):- consult(InputFile).
+
+load_database(InputFile):-
+        open(InputFile,read,InputHandle),
+        repeat_read_database(InputHandle),
+        close(InputHandle),
+        !.
+
+repeat_read_database(InputHandle):-
+        read_term(InputHandle,Term,[]),
+        Term \= end_of_file,
+        assert(Term),
+        repeat_read_database(InputHandle).
+repeat_read_database(_InputHandle).
+
+label_time_stamp(Datime):-
+        current_datime(DTdef),
+        DTdef=datime(Y,M,D,H,Min,Sec),
+        incCounter(timeCounter(datime(Y,M,D,H,Min,Sec))),
+        counter(timeCounter(datime(Y,M,D,H,Min,Sec)),Counter),
+        Datime = datime(Y,M,D,H,Min,Sec,Counter),
+        !.
+
+% fire_event_list_return_external_events(EventList,OutputList)
+fire_event_list_return_external_events(EventList,OutputList):-
+	is_list(EventList),
+	fire_events_java(EventList,OutputList),
+	!.
+fire_event_list_return_external_events(EventList,OutputList):-
+	write('Warning: fire_event_list_return_external_events(EventList,OutputList) the EventList is not a list.\n We will fire a single event EventList.'),
+	fire_events_java([EventList],OutputList),
+	!.
+
+% execute_event_stream_file(+EventFile)
+execute_event_stream_file(EventFile):-
+        load_event_stream_file(EventFile,EventList),
+        %mycputime(T0),
+        repeat_fire_event_list(EventList),
+        %mycputime(T1), DT is T1-T0,
+        %nl, write('Cputime for execute_event_stream_file: '), write(DT),
+        %write('ms'), nl,
+        !.
+% load_event_stream_file(+InputHandle,-Events)
+load_event_stream_file(EventFile,EventList):-
+        open(EventFile,read,InputHandle),
+        repeat_read_event(InputHandle,EventList),
+        close(InputHandle).
+% repeat_read_event(+InputHandle,-Events)
+repeat_read_event(InputHandle,[Term|RestEvents]):-
+        read_term(InputHandle,Term,[]),
+        Term \= end_of_file,
+        repeat_read_event(InputHandle,RestEvents),
+        !.
+repeat_read_event(_InputHandle,[]).
+
+% fire_event_list(+EventList)
+fire_event_list(EventList):-
+	is_list(EventList),
+	repeat_fire_event_list(EventList),
+	!.
+fire_event_list(EventList):-
+	write('Warning: fire_event_list(EventList) the EventList is not a list.\n We will fire a single event EventList.'),
+	event(EventList),
+	!.
+	
+% repeat_fire_event_list(-Events)
+repeat_fire_event_list([sleep(_H)|T]):-
+        prolog_backend(yap), % YAP prolog does not have the sleep predicate
+        repeat_fire_event_list(T).
+repeat_fire_event_list([H|T]):-
+        call(H),
+        repeat_fire_event_list(T).
+repeat_fire_event_list([]).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ins_event_rule/1
+%  the attribute can be a rule
+ins_event_rule(Term):-
+        tr_operators,
+        parse_event_rule(Term,EventRule),
+        binarization([EventRule],BinaryEventRules),
+        logging_binary_file('dynamic_rules',BinaryEventRules),
+        event2tr_transformation(BinaryEventRules,TRRules),
+        logging_TR_file('dynamic_rules',TRRules),
+        assert_trRules(TRRules),
+        !.
+
+% del_event_rule/1
+%  deletes event rules: the attribute can be a rule reference or a rule
+% The reasons for using only the id in delete are the following:
+% 1. event rules are compiled in multiple internal rules, so deleting all
+% rules that resulted from one event rule is quite complicated: we have to
+% compile the rule and extract all rules resulted from this one rule;
+% 2. temporary events are re-named (and also new variables are generated) and
+% these temporary have to be checked at deletion. Simple unification of even
+% variant won't do it because right bindings have to be checked.
+% 3. sharing is enabled and we don't want to delete common bodies that take
+% part in other rules as well as the current one that we delete.
+% Example 1:
+% d<- a seq b seq c.
+% e<- a seq b seq c.
+% Sharing is enabled by default, then the two bodies are represented by a same
+% internal events. After binarization we have:
+% temp1<- a seq b.
+% temp2<- temp1 seq c.
+% d<- temp2.
+% e<- temp2.
+% If we delete the rule for d, we don't want to delete the rules for temp1 and
+% temp2 because they are shared in the definition of e.
+% Example 2: however, we don't want to delete only the rule for "d<- temp2."
+% and leave all the intermediary internal rules inside without checking that
+% other rules are using it.
+% f<- a seq b seq c seq ... seq z.
+% Just deleting the root rule: f<- tempX. leaves inside a lot of internal
+% events.
+% 4. when we have rule ids (and properties associated to these ids) these are
+% pushed into all compiled rules. We know exactly what to delete.
+% 5. we can also do bulk deletes with ids: multiple rules can share the same
+% ID (the id doesn't have to be unique), so deleting one ID deletes all rules
+% that share that ID.
+del_event_rule(Label):-
+	Label \= '<-'(_H,_B),
+	Label \= 'rule:'(_L,_R),
+	retractall(trClause(Label,_Head,_Body)),
+	!.
+del_event_rule(Term):-
+        tr_operators,
+        parse_event_rule(Term,EventRule),
+        binarization([EventRule],BinaryEventRules),
+        event2tr_transformation(BinaryEventRules,TRRules),
+        retractall_internal(TRRules),
+        !.
+
+% reset_etalis/0
+reset_etalis:-
+	retractall(trClause(_Label,_Head,_Body)),
+	reset_db,
+	!.
+
+% retractall_internal/1
+retractall_internal([]).
+retractall_internal([H|T]):-
+	rename_temp_events(H,H2),
+	retractall_trClause(H2),
+	retractall_internal(T).
+
+% rename_temp_events/2
+rename_temp_events(H,H):-
+	var(H),
+	!.
+rename_temp_events([H|T],[H2|T2]):-
+	rename_temp_events(H,H2),
+	rename_temp_events(T,T2),
+	!.
+rename_temp_events(H,H):-
+	number(H),
+	!.
+rename_temp_events(H,H2):-
+	atom(H),
+	non_temp_event(H,H2),
+	!.
+rename_temp_events(H,H2):-
+	H =.. L,
+	rename_temp_events(L,H2),
+	!.
+
+% retractall_trClause/1
+retractall_trClause(H2):-
+	trClause(Label,Head,Body),
+	rename_temp_events(trClause(Label,Head,Body),H3),
+	H2=H3,
+	retractall(trClause(Label,Head,Body)),
+	!.
+retractall_trClause(_H2).
+
+% non_temp_event/2
+non_temp_event(X,_X2):-
+	atom_codes(X,[116, 101, 109, 112, 95, 101, 95|_]),
+	!.
+non_temp_event(unlabeled,_). % unlabeled rules match all rules
+non_temp_event(X,X).
+
+% del_all_event_rules/1
+%  delete all rules whose head is d (this doesn't delete temporary  events of
+%  compiled rules, since we don't know what were the original rules
+del_all_event_rules(Head):-
+	retractall(trClause(_Label,Head,_Body)),
+	!.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ins_static_rule/1
+ins_static_rule(Term):-
+	assert(Term).
+
+% del_static_rule/1
+del_static_rule(Term):-
+	retractall(Term).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+

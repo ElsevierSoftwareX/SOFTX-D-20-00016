@@ -1,0 +1,5 @@
+KickingTheBall 3.0 11 1.27 11.6
+BallPossession 3.0 9 1.09 1.19 8.8
+Tackle 3.0 26 0.75 0.94 10.0
+BallDeflection 3.0 27 1.09 10 8.6 30.0
+BallOut 1.0 50

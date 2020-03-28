@@ -1,0 +1,10 @@
+# Ignore image frames
+frames/*
+
+# Ignore video files
+input/*.txt
+input/*.mkv
+
+# Ignore folders
+Match_synchro_test
+Match_synchro_test_2

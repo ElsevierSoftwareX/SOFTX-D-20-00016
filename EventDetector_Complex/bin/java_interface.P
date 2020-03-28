@@ -1,0 +1,48 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% findall_io/2
+findall_io(C,L):-
+	findall(C2,call_io(C,C2),L),
+	!.
+
+% call_io/2
+call_io(C,C2):-
+	call(C),
+	C2 = C.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% :- set_etalis_flag(store_fired_events_java,on)
+
+% storing triggered events for the Java interface
+:- dynamic(stored_event_java/1).
+store_event_java(L):-
+        store_fired_events_java(on),
+        !,
+        
+        ( (L=event(Event,[_T1,_T2]),external_trigger_check(Event))
+		-> 
+        	assert(stored_event_java(L))
+        	; true ).
+store_event_java(_L).
+
+%:- spy(store_event_java/1).
+
+% fire_events_java/2
+fire_events_java(InputList,OutputList):-
+	retractall(stored_event_java(_)),
+	fire_events_java_internal(InputList),
+	findall(E,stored_event_java(E),OutputList),
+	retractall(stored_event_java(_)),
+	!.
+
+% fire_events_java_internal/1
+fire_events_java_internal([]):-
+	!.
+fire_events_java_internal([H|T]):-
+	event(H),
+	fire_events_java_internal(T),
+	!.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+

@@ -1,0 +1,21 @@
+runsyn(FileName):-
+	['C:/Documents and Settings/Administrator/workspace/etalis/src/event_tr.P'],
+	disable_order,
+	createNewFile('C:/Documents and Settings/Administrator/workspace/etalis/src/examples/SynEvent.log'),
+	compile_events('C:/Documents and Settings/Administrator/workspace/etalis/current_event.event'),
+	cputime(CT0),
+	open(FileName,read,InputHandle),
+	repeat_read_01(InputHandle),
+	close(InputHandle),
+	cputime(CT1), DCT is CT1-CT0,
+	retractall(time_cpu(_)),
+	assert(time_cpu(DCT)),
+	enable_order,
+	!.
+	
+repeat_read_01(InputHandle):-
+	read(InputHandle,Term),
+	Term \= end_of_file,
+	call(Term),
+	repeat_read_01(InputHandle).
+repeat_read_01(_InputHandle).

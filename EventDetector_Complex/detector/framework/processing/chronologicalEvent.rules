@@ -1,0 +1,17 @@
+% Input Atomic Events
+ print_trigger(ballPossession/9).
+ print_trigger(tackle/9).
+
+% Output Semi-Complex Events
+ print_trigger(tackleSC/10).
+
+% Output Complex Events
+ print_trigger(tackleC/7).
+
+% Event rules
+tackleC(Tf,Tf2,TvId,TvtId,TtId,TttId,true) <- tackleSC(Tf,Tf2,TvId,TvtId,Tvx,Tvy,TtId,TttId,Ttx,Tty) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (Bf>Tf2,BpId=TtId,getTrue(true),call_gc).
+tackleC(Tf,Tf2,TvId,TvtId,TtId,TttId,false) <- tackleSC(Tf,Tf2,TvId,TvtId,Tvx,Tvy,TtId,TttId,Ttx,Tty) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (Bf>Tf2,BpId\=TtId,getFalse(false),call_gc).
+tackleSC(Tf,Tf3,TvId,TvtId,Tvx,Tvy,TtId,TttId,Ttx,Tty) <- tackleSC(Tf,Tf2,TvId,TvtId,Tvx,Tvy,TtId,TttId,Ttx,Tty) seq tackle(Tf3,TvId2,TvtId2,Tvx2,Tvy2,TtId2,TttId2,Ttx2,Tty2) where (Tf3>Tf2,Tf3-Tf2<121,call_gc).
+tackleSC(Tf,Tf2,TvId,TvtId,Tvx,Tvy,TtId,TttId,Ttx,Tty) <- tackle(Tf,TvId,TvtId,Tvx,Tvy,TtId,TttId,Ttx,Tty) seq tackle(Tf2,TvId2,TvtId2,Tvx2,Tvy2,TtId2,TttId2,Ttx2,Tty2) where (Tf2>Tf,Tf2-Tf<121,call_gc).
+tackleC(Tf,Tf,TvId,TvtId,TtId,TttId,true) <- tackle(Tf,TvId,TvtId,Tvx,Tvy,TtId,TttId,Ttx,Tty) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (Bf>Tf,BpId=TtId,getTrue(true),call_gc).
+tackleC(Tf,Tf,TvId,TvtId,TtId,TttId,false) <- tackle(Tf,TvId,TvtId,Tvx,Tvy,TtId,TttId,Ttx,Tty) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (Bf>Tf,BpId\=TtId,getFalse(false),call_gc).

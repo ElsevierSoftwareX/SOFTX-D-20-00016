@@ -1,0 +1,19 @@
+      BODY { 
+        font-family: sans-serif; 
+        font-size: 10pt; 
+        background-color: white; 
+        color: black; 
+      } 
+      TABLE { 
+        border: 1px solid black; 
+        font-family: sans-serif; 
+        font-size: 10pt; 
+      } 
+      .row1 { 
+        background-color: gray; 
+        color: black; 
+      } 
+      .row2 { 
+        background-color: silver; 
+        color: black; 
+      } 

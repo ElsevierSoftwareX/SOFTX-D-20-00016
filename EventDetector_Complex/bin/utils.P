@@ -1,0 +1,167 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Unique Count
+:- dynamic(count/1).
+:- assert(count(0)).
+incCount :- count(Y) , X is Y+1, retractall(count(_)), assert(count(X)), !.
+resetCount :- retractall(count(_)), assert(count(0)), !.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% counter
+:- dynamic(counter_internal/2). % counter_internal(CounterName,Value)
+resetCounter(Name):-
+        retractall(counter_internal(Name,_)),
+        assert(counter_internal(Name,0)),
+        !.
+incCounter(Name):-
+        counter_internal(Name,Value),
+        Value1 is Value+1,
+        retractall(counter_internal(Name,_)),
+        assert(counter_internal(Name,Value1)),
+        !.
+incCounter(Name):-
+        resetCounter(Name),
+        incCounter(Name),
+        !.
+counter(CounterName,Value):-
+        counter_internal(CounterName,Value),
+        !.
+counter(Name,0):- % the counter doesn't exist yet
+        resetCounter(Name),
+        !.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% global flag - variable with name and value
+:- dynamic(flag_internal/2).
+% set_flag/2
+set_flag(Name,Value):- % same value was set before
+        flag_internal(Name,Value),
+        !.
+set_flag(Name,Value):- % a different value was set before
+        flag_internal(Name,OldValue),
+        retract(flag_internal(Name,OldValue)),
+        assert(flag_internal(Name,Value)),
+        !.
+set_flag(Name,Value):- % no value was set before
+        assert(flag_internal(Name,Value)),
+        !.
+
+% get_flag/2
+get_flag(Name,Value):-
+        flag_internal(Name,Value),
+        !.
+get_flag(_Name,nil).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% predicate used by N-times
+trans_ntime(Temp, Event, N, Out) :-
+        N > 1,
+        NTime is N-1,
+        Temp1 =.. [seq, Temp, Event],
+        trans_ntime(Temp1, Event, NTime, Out),
+        !.
+trans_ntime(Temp, Event, 1, Out) :-
+        Out =.. [seq, Temp, Event],
+        !.
+trans_ntime(Temp, _Event, 0, Out) :-
+        Out = Temp,
+        !.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+my_member(H,[H|_T]).
+my_member(H,[_|T]):-
+        my_member(H,T).
+
+my_member_variant(H1,[H2|_T]):-
+        prolog_backend(swi),
+        variant(H1,H2).
+my_member_variant(H,[_|T]):-
+        my_member_variant(H,T).
+
+my_length([],0).
+my_length([_|T],N):- my_length(T,N1), N is N1+1.
+
+my_append([],L,L).
+my_append([H|T],L,[H|R]):-
+        my_append(T,L,R).
+
+%retract all members of a list
+retract_list([H|T]) :-
+        del(H) ,
+        write('LOG: delete form database : '),
+        write(H),nl,
+        retract_list(T);
+        true.
+retract_list([]).
+
+my_reverse(L,RL):-
+        my_reverse(L,[],RL).
+my_reverse([],Temp,Temp).
+my_reverse([H|T],Temp,TT):-
+        my_reverse(T,[H|Temp],TT).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+min(T1,T2,T3) :- ( number(T1), number(T2), T1<T2 ) -> T3 = T1 ; T3 = T2.
+min(T1,T2,T3) :- ( is_datime(T1), is_datime(T2), less_datime(T1,T2) )
+        -> T3 = T1 ; T3 = T2.
+
+max(T1,T2,T3) :- ( number(T1), number(T2), T2<T1 ) -> T3 = T1 ; T3 = T2.
+max(T1,T2,T3) :- ( is_datime(T1), is_datime(T2), less_datime(T2,T1) )
+        -> T3 = T1 ; T3 = T2.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+mycputime(T0):- % XSB, Sicstus, Prolog standard
+        statistics(runtime,[T0,_T0]),
+        !.
+%mycputime(T0):- T0 is cputime, !. %Yap
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% set_intersection/3
+%  we assume that the elements are not duplicated inside the sets
+set_intersection([],_S2,[]):-
+	!.
+set_intersection([H1|T1],S2,[H1|R]):-
+	my_member(H1,S2),
+	!,
+	set_intersection(T1,S2,R).
+set_intersection([_H1|T1],S2,R):-
+	!,
+	set_intersection(T1,S2,R).
+
+% set_difference/3
+set_difference([],_S2,[]):-
+	!.
+set_difference([H1|T1],S2,[H1|R]):-
+	\+( my_member(H1,S2) ),
+	!,
+	set_difference(T1,S2,R).
+set_difference([_H1|T1],S2,R):-
+	!,
+	set_difference(T1,S2,R).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% write_list(+X)
+write_list([]):-
+	write([]).
+write_list([H|T]):-
+	write('['),
+	nl,
+	write_list_intern([H|T]),
+	write(']'),
+	!.
+
+% write_list_intern(+X)
+write_list_intern([H]):-
+	write('  '),
+	write(H),
+	nl,
+	!.
+write_list_intern([H|T]):-
+	write('  '),
+	write(H),
+	write(','),
+	nl,
+	write_list_intern(T),
+	!.
+write_list_intern([]):-
+	!.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

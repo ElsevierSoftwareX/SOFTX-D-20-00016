@@ -1,0 +1,14 @@
+eventClause(complexEvent5, temp_e_8(complexEvent0, complexEvent2)cnot complexEvent4).
+eventClause(temp_e_8(complexEvent0, complexEvent2), or(complexEvent0, complexEvent2)).
+eventClause(complexEvent4, temp_e_7(t5, t6)cnot t7).
+eventClause(temp_e_7(t5, t6), seq(t5, t6)).
+eventClause(complexEvent3, or(temp_e_5(t1, temp_e_4(t2, t3)), temp_e_6(t4, t5))).
+eventClause(temp_e_6(t4, t5), seq(t4, t5)).
+eventClause(temp_e_5(t1, temp_e_4(t2, t3)), seq(t1, temp_e_4(t2, t3))).
+eventClause(temp_e_4(t2, t3), seq(t2, t3)).
+eventClause(complexEvent2, or(t0, t1)).
+eventClause(complexEvent1, conc(temp_e_2(t2, t4), temp_e_3(t5, t6))).
+eventClause(temp_e_3(t5, t6), seq(t5, t6)).
+eventClause(temp_e_2(t2, t4), seq(t2, t4)).
+eventClause(complexEvent0, seq(t1, temp_e_1(t2, t3))).
+eventClause(temp_e_1(t2, t3), seq(t2, t3)).

@@ -1,0 +1,263 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% repeat_read(+InputHandle,-RawEventRules)
+repeat_read(InputHandle,RawEventRules):-
+	ground(InputHandle),
+        repeat_read_internal(InputHandle,RawEventRules),
+        !.
+
+% repeat_read_internal(+InputHandle,-RawEventRules)
+repeat_read_internal(InputHandle,[Term|RestEventRules]):-
+        read_term(InputHandle,Term,[]),
+        Term \= end_of_file,
+        repeat_read_internal(InputHandle,RestEventRules),
+        !.
+repeat_read_internal(_InputHandle,[]).
+
+% parse_event_rules/2
+parse_event_rules([],[]):-
+	!.
+parse_event_rules([H|T],L):-
+	parse_event_rule(H,EventRule),
+	parse_event_rules(T,T2),
+        conc1(EventRule,T2,L),
+        !.
+parse_event_rules([H|T],L):- % skip wrong formated rules
+	nl,nl,write('Warning: we could not parse the input '), 
+	write(H), 
+	nl,nl,
+	parse_event_rules(T,L),
+        !.
+	
+% tr_operators/0
+tr_operators:-
+        op(1200,xfy, 'rule:'),
+        op(1200,xfy, '<-'),
+        % operators
+        op(1025,yfx, 'seq'), % sequential conjunction
+        op(1025,yfx, 'Seq'),
+        op(1025,yfx, 'SEQ'),
+        op(1025,yfx, 'forall_seq'), % forall sequential conjunction
+        op(1025,yfx, 'Forall_Seq'),
+        op(1025,yfx, 'FORALL_SEQ'),
+        % compatibility with old versions of Etalis:
+        %       * for sequence, /\\ conj, ...
+        op(1025,yfx, '*'),
+        op(1040,yfx, 'and'), % classical conjunction
+        op(1040,yfx, 'And'),
+        op(1040,yfx, 'AND'),
+        op(1040,yfx, '/\\'),
+        op(1045,yfx, 'par'), % parallel conjunction
+        op(1045,yfx, 'Par'),
+        op(1045,yfx, 'PAR'),
+        op(1045,yfx, '#'),
+        op(1053,yfx, 'or'), % disjunction
+        op(1053,yfx, 'Or'),
+        op(1053,yfx, 'OR'),
+        op(1053,yfx, '\\/'),
+        op(1025,yfx, 'do'),
+        op(1025,yfx, 'Do'),
+        op(1025,yfx, 'DO'),
+        op(1025,yfx, 'equals'),
+        op(1025,yfx, 'Equals'),
+        op(1025,yfx, 'EQUALS'),
+        op(1025,yfx, 'meets'),
+        op(1025,yfx, 'Meets'),
+        op(1025,yfx, 'MEETS'),
+        op(1025,yfx, 'during'),
+        op(1025,yfx, 'During'),
+        op(1025,yfx, 'DURING'),
+        op(1025,yfx, 'starts'),
+        op(1025,yfx, 'Starts'),
+        op(1025,yfx, 'STARTS'),
+        op(1025,yfx, 'finishes'),
+        op(1025,yfx, 'Finishes'),
+        op(1025,yfx, 'FINISHES'),
+        op(1050,yfx, 'where'),
+        op(1050,yfx, 'Where'),
+        op(1050,yfx, 'WHERE'),
+        op(1050,yfx, 'event_multiply'),
+        op(1050,yfx, 'Event_multiply'),
+        op(1050,yfx, 'EVENT_MULTIPLY'),
+        op(200,xf, 'star_times'), % implementation of *times
+        op(1025,yfx, 'ntimes'), % implementation of ntimes
+        op(1031,yfx, 'cnot'), % negation: specific for each operator
+        op(1031,yfx, 'Cnot'),
+        op(1031,yfx, 'CNOT'),
+        op(1031,yfx, 'fnot'), % another type of negation
+        op(1031,yfx, 'Fnot'),
+        op(1031,yfx, 'FNOT'),
+        op(1031,yfx, 'not'), % another type of negation
+        op(1031,yfx, 'Not'),
+        op(1031,yfx, 'NOT').
+
+:- tr_operators.
+
+op_functor('rule:',rule_labelf).
+op_functor('seq',seqf).
+op_functor('Seq',seqf).
+op_functor('SEQ',seqf).
+op_functor('*',seqf).
+op_functor('forall_seq',forall_seqf).
+op_functor('Forall_Seq',forall_seqf).
+op_functor('FORALL_SEQ',forall_seqf).
+op_functor('and',andf).
+op_functor('And',andf).
+op_functor('AND',andf).
+op_functor('/\\',andf).
+op_functor('par',parf).
+op_functor('Par',parf).
+op_functor('PAR',parf).
+op_functor('#',parf).
+op_functor('or',orf).
+op_functor('Or',orf).
+op_functor('OR',orf).
+op_functor('\\/',orf).
+op_functor('do',dof).
+op_functor('Do',dof).
+op_functor('DO',dof).
+op_functor('equals',equalsf).
+op_functor('Equals',equalsf).
+op_functor('EQUALS',equalsf).
+op_functor('meets',meetsf).
+op_functor('Meets',meetsf).
+op_functor('MEETS',meetsf).
+op_functor('during',duringf).
+op_functor('During',duringf).
+op_functor('DURING',duringf).
+op_functor('starts',startsf).
+op_functor('Starts',startsf).
+op_functor('STARTS',startsf).
+op_functor('finishes',finishesf).
+op_functor('Finishes',finishesf).
+op_functor('FINISHES',finishesf).
+op_functor('where',wheref).
+op_functor('Where',wheref).
+op_functor('WHERE',wheref).
+op_functor('event_multiply',event_multiplyf).
+op_functor('Event_multiply',event_multiplyf).
+op_functor('EVENT_MULTIPLY',event_multiplyf).
+op_functor('star_times',star_timesf).
+op_functor('ntimes',ntimesf).
+op_functor('cnot',cnotf).
+op_functor('Cnot',cnotf).
+op_functor('CNOT',cnotf).
+op_functor('fnot',fnotf).
+op_functor('Fnot',fnotf).
+op_functor('fNOT',fnotf).
+op_functor('not',notf).
+op_functor('Not',notf).
+op_functor('NOT',notf).
+
+% parse_event_rule(+Term,-EventRule)
+parse_event_rule('rule:'(RuleLabelRaw,Rule),EventRule):-
+        parse_event_rule(Rule,EventRuleUnlabeled),
+        EventRuleUnlabeled = eventClause(unlabeled,Lhs,F),
+        parse_event_rule_label(RuleLabelRaw,RuleLabel),
+        EventRule = eventClause(RuleLabel,Lhs,F),
+        !.
+% alternative notation for event rules
+parse_event_rule('<-'(Lhs,Rhs),EventRule):-
+        Rhs =.. L,
+        parse_event_formula(L,F_temp),
+        %left2right_associate([],F_temp,F),
+        F = F_temp,
+        EventRule = eventClause(unlabeled,Lhs,F),
+        !.
+%parse_event_rule((Lhs :- Rhs),EventRule):-
+%        Rhs =.. L,
+%        parse_event_formula(L,F_temp),
+%        %left2right_associate([],F_temp,F),
+%        F = F_temp,
+%        EventRule = eventClause(unlabeled,Lhs,F),
+%        !.
+parse_event_rule((Lhs :- Rhs),nil):-
+        assert((Lhs :- Rhs)),
+        !.
+parse_event_rule(event_rule_property(RuleId,PropertyName,PropertyValue),nil):-
+        assert(event_rule_property(RuleId,PropertyName,PropertyValue)),
+        !.
+parse_event_rule(db(':-'(Query)),nil):-
+        call(Query),
+        !.
+parse_event_rule(db('?-'(Query)),nil):- 
+	% ToDo: we should assert these calls to be fired after the whole
+	%  program was loaded
+        call(Query),
+        !.
+parse_event_rule(db(Fact),nil):-
+        assert(Fact),
+        !.
+parse_event_rule(prolog(Rule),nil):-
+        assert(Rule),
+        !.
+parse_event_rule(module(ModuleName,ExternalPreds),nil):-
+        assert(etalis_module(ModuleName,ExternalPreds)),
+        !.
+parse_event_rule(use_module(ModuleName),nil):-
+        compile_event_file(ModuleName),
+        !.
+parse_event_rule(static(Rule),nil):-
+        assert(Rule),
+        !.
+parse_event_rule(external_trigger(Fact),nil):-
+        assert(external_trigger(Fact)),
+        !.
+parse_event_rule(print_trigger(Fact),nil):-
+        assert(external_trigger(Fact)),
+        !.
+parse_event_rule(Fact,nil):-
+        assert(Fact),
+        !.
+
+:- dynamic(etalis_module/2).
+
+% parse_event_rule_label(+RuleLabelRaw,-RuleLabel)
+%       parse event rule label and detect label properties
+parse_event_rule_label(RuleLabelRaw,RuleLabel):-
+        atom(RuleLabelRaw),
+        !,
+        RuleLabel = RuleLabelRaw.
+parse_event_rule_label(RuleLabelRaw,RuleLabel):-
+        RuleLabelRaw =.. [RuleLabel,ListProperties],
+        !,
+        assert_rule_properties(RuleLabel,ListProperties).
+parse_event_rule_label(RuleLabel,RuleLabel).
+
+% assert_rule_properties(+RuleLabel,+ListProperties)
+assert_rule_properties(_RuleLabel,[]).
+assert_rule_properties(RuleLabel,[property(P,V)|R]):-
+        assert(event_rule_property(RuleLabel,P,V)),
+        assert_rule_properties(RuleLabel,R).
+
+% concatenate event rules ignoring nil rules
+conc1(EventRule,RestEventRules,EventRules):-
+        EventRule = nil,
+        !,
+        EventRules = RestEventRules.
+conc1(EventRule,RestEventRules,EventRules):-
+        !,
+        EventRules = [EventRule|RestEventRules].
+
+% parse_event_formula(+List,-EventFormula)
+% ntimes operator is transformed into N sequences
+parse_event_formula([Op,I1,I2],EventFormula):-
+        op_functor(Op,OpString),
+        I1 =.. LI1, parse_event_formula(LI1,I1EventFormula),
+        I2 =.. LI2, parse_event_formula(LI2,I2EventFormula),
+           EventFormula =.. [OpString,I1EventFormula,I2EventFormula],
+           !.
+parse_event_formula([Op,I],EventFormula):- % unary operation
+        op_functor(Op,OpString),
+        I =.. LI,parse_event_formula(LI,IEventFormula),
+           EventFormula =.. [OpString,IEventFormula],
+           !.
+parse_event_formula([A],EventFormula):-
+        atomic(A),
+        EventFormula = A,
+        !.
+parse_event_formula(List,EventFormula):-
+        Literal =.. List,
+        EventFormula = Literal,
+        !.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

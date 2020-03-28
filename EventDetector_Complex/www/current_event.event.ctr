@@ -1,0 +1,4 @@
+trClause(event(t1, [_G517, _G520]), ins(goal(event(temp_e_3(t2, t3)), event(t1, [_G517, _G520]), event(complexEvent0)))).
+trClause(event(temp_e_3(t2, t3), [_G548, _G551]), seq(db(goal(event(temp_e_3(t2, t3)), event(t1, [_G517, _G520]), event(complexEvent0))), seq(del(goal(event(temp_e_3(t2, t3)), event(t1, [_G517, _G520]), event(complexEvent0))), seq(less(_G520, _G548), event(complexEvent0, [_G517, _G551]))))).
+trClause(event(t2, [_G619, _G622]), ins(goal(event(t3), event(t2, [_G619, _G622]), event(temp_e_3(t2, t3))))).
+trClause(event(t3, [_G650, _G653]), seq(db(goal(event(t3), event(t2, [_G619, _G622]), event(temp_e_3(t2, t3)))), seq(del(goal(event(t3), event(t2, [_G619, _G622]), event(temp_e_3(t2, t3)))), seq(less(_G622, _G650), event(temp_e_3(t2, t3), [_G619, _G653]))))).

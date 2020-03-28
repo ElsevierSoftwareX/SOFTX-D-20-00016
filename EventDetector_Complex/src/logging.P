@@ -1,0 +1,68 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% logging
+:- dynamic(logging/1).
+
+log(L):-
+        logging(on),
+        !,
+        (
+                (
+                        write('  Log:   '),
+                        write(L),
+                        nl
+                );(
+                        write('  Failed:  '),
+                        write(L),
+                        nl,
+                        fail
+                )
+        ),
+        store_event(L),
+        store_event_java(L). % defined in the java_interface.P
+log(L):-
+        store_event(L),
+        store_event_java(L).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% storing triggered events
+:- dynamic(stored_event/1).
+store_event(L):-
+        store_fired_events(on),
+        !,
+        assert(stored_event(L)).
+store_event(_L).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% logging events in files
+:- dynamic(logging_to_file/1).
+
+write_log(File,Event) :-
+        logging_to_file(on),
+        open(File,append,Stream),
+        write(Stream,Event),
+        nl(Stream),
+        close(Stream),
+        !.
+write_log(_File,_Event) :-
+        !.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%logging_external_event(event(Event,[T1,T2])):- true.
+logging_external_event(event(Event,[T1,T2])):-
+        external_trigger_check(Event),
+        !,
+        (
+                ( write('*Event: '), write(Event), write(' @ '),
+                        write([T1,T2]), nl )
+                %TODO write_log should only be used when logging_to_file(on)
+                ,write_log('external_tr.log',Event)
+                %;(write('  Failed:  '), write(event(Event,[T1,T2])), nl,fail)
+        ),
+        log(event(Event,[T1,T2])),
+        spy_point(Event).
+logging_external_event(event(Event,[T1,T2])):-
+        !,
+        log(event(Event,[T1,T2])),
+        spy_point(Event).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

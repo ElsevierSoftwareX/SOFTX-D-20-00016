@@ -1,0 +1,96 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+:- dynamic(garbage_control/1).
+
+start_garbage_collection :-
+        prolog_backend(swi),
+        (garbage_control(general), garbage_window(N), N>0)
+        -> general_garbage_collection
+                ; ( garbage_control(pattern)
+                        -> pattern_garbage_collection
+                        ; true
+        ).
+
+% explicit call garbage collection to retract all goals waiting for completion
+call_gc:-
+        findall(etr_db(T2,T1,B,A,C),
+                (
+                        etr_db(T2,T1,B,A,C),
+                        retract(etr_db(T2,T1,B,A,C))),
+                _L),
+        (prolog_backend(yap) -> garbage_collect; true),
+        %garbage_collect,
+        !.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% general garbage collection
+%       for garbage_control(general)
+% garbage_window(N)
+:- dynamic(garbage_window/1).
+
+general_garbage_collection :-
+        garbage_window(N),
+        alarm(N,general_garbage_collection_internal(N),_).
+general_garbage_collection_internal(N):-
+        % collect garbage
+        %       computer the threshold datime as the current time + time window
+        current_datime(CurrentDatime),
+        garbage_window(N),
+        datime_minus_sec(CurrentDatime,N,Datime0),
+        Datime0 = datime(T1_Y,T1_M,T1_D,T1_H,T1_Min,T1_S),
+        datime(T1_Y,T1_M,T1_D,T1_H,T1_Min,T1_S,0) = Datime1,
+        % find and delete all the facts in the database triggered before
+        %       the threshold
+        findall(etr_db(T2,T1,B,A,C),
+                ( etr_db(T2,T1,B,A,C),
+                        less_datime(T2,Datime1),
+                        retract(etr_db(T2,T1,B,A,C))),
+                _L),
+        % schedule the next garbage collection
+        alarm(N,general_garbage_collection_internal(N),_).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% pattern based garbage collection
+%       for garbage_control(pattern)
+%       individual rules have gc time windows
+
+pattern_garbage_collection:-
+        findall(
+                event_rule_property(Label,window,V),
+                event_rule_property(Label,window,V),
+                L),
+        start_alarms_patern_gc(L),
+        !.
+pattern_garbage_collection.
+
+start_alarms_patern_gc([]).
+start_alarms_patern_gc([
+                event_rule_property(Label,window,V)|L]):-
+        alarm(V,
+                pattern_garbage_collection_internal(
+                  event_rule_property(Label,window,V))
+                ,_),
+        start_alarms_patern_gc(L).
+
+pattern_garbage_collection_internal(
+                  event_rule_property(Label,window,V)):-
+        % collect garbage
+        %       computer the threshold datime as the current time + time window
+        current_datime(CurrentDatime),
+        datime_minus_sec(CurrentDatime,V,Datime0),
+        Datime0 = datime(T1_Y,T1_M,T1_D,T1_H,T1_Min,T1_S),
+        datime(T1_Y,T1_M,T1_D,T1_H,T1_Min,T1_S,0) = Datime1,
+        % find and delete all the facts in the database triggered before
+        %       the threshold
+        findall(etr_db(T2,T1,B,A,C,Label),
+                ( etr_db(T2,T1,B,A,C,Label),
+                        %write(etr_db(T2,T1,B,A,C,Label)), nl,nl,
+                        less_datime(T2,Datime1),
+                        retract(etr_db(T2,T1,B,A,C,Label))),
+                _L),
+        % schedule the next garbage collection
+        alarm(V,
+                pattern_garbage_collection_internal(
+                  event_rule_property(Label,window,V))
+                ,_).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

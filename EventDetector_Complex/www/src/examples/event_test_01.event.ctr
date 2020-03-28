@@ -1,0 +1,28 @@
+trClause(event(temp_e_8(complexEvent0, complexEvent2)cnot complexEvent4, [_G2985, _G2988]), event(complexEvent5, [_G2985, _G2988])).
+trClause(event(complexEvent0, [_G1706, _G1709]), event(temp_e_8(complexEvent0, complexEvent2), [_G1706, _G1709])).
+trClause(event(complexEvent2, [_G1727, _G1730]), event(temp_e_8(complexEvent0, complexEvent2), [_G1727, _G1730])).
+trClause(event(temp_e_7(t5, t6)cnot t7, [_G2955, _G2958]), event(complexEvent4, [_G2955, _G2958])).
+trClause(event(t5, [_G1748, _G1751]), ins(goal(event(t6), event(t5, [_G1748, _G1751]), event(temp_e_7(t5, t6))))).
+trClause(event(t6, [_G1779, _G1782]), seq(db(goal(event(t6), event(t5, [_G1748, _G1751]), event(temp_e_7(t5, t6)))), seq(del(goal(event(t6), event(t5, [_G1748, _G1751]), event(temp_e_7(t5, t6)))), seq(less(_G1751, _G1779), event(temp_e_7(t5, t6), [_G1748, _G1782]))))).
+trClause(event(temp_e_5(t1, temp_e_4(t2, t3)), [_G1850, _G1853]), event(complexEvent3, [_G1850, _G1853])).
+trClause(event(temp_e_6(t4, t5), [_G1871, _G1874]), event(complexEvent3, [_G1871, _G1874])).
+trClause(event(t4, [_G1892, _G1895]), ins(goal(event(t5), event(t4, [_G1892, _G1895]), event(temp_e_6(t4, t5))))).
+trClause(event(t5, [_G1923, _G1926]), seq(db(goal(event(t5), event(t4, [_G1892, _G1895]), event(temp_e_6(t4, t5)))), seq(del(goal(event(t5), event(t4, [_G1892, _G1895]), event(temp_e_6(t4, t5)))), seq(less(_G1895, _G1923), event(temp_e_6(t4, t5), [_G1892, _G1926]))))).
+trClause(event(t1, [_G1994, _G1997]), ins(goal(event(temp_e_4(t2, t3)), event(t1, [_G1994, _G1997]), event(temp_e_5(t1, temp_e_4(t2, t3)))))).
+trClause(event(temp_e_4(t2, t3), [_G2025, _G2028]), seq(db(goal(event(temp_e_4(t2, t3)), event(t1, [_G1994, _G1997]), event(temp_e_5(t1, temp_e_4(t2, t3))))), seq(del(goal(event(temp_e_4(t2, t3)), event(t1, [_G1994, _G1997]), event(temp_e_5(t1, temp_e_4(t2, t3))))), seq(less(_G1997, _G2025), event(temp_e_5(t1, temp_e_4(t2, t3)), [_G1994, _G2028]))))).
+trClause(event(t2, [_G2096, _G2099]), ins(goal(event(t3), event(t2, [_G2096, _G2099]), event(temp_e_4(t2, t3))))).
+trClause(event(t3, [_G2127, _G2130]), seq(db(goal(event(t3), event(t2, [_G2096, _G2099]), event(temp_e_4(t2, t3)))), seq(del(goal(event(t3), event(t2, [_G2096, _G2099]), event(temp_e_4(t2, t3)))), seq(less(_G2099, _G2127), event(temp_e_4(t2, t3), [_G2096, _G2130]))))).
+trClause(event(t0, [_G2198, _G2201]), event(complexEvent2, [_G2198, _G2201])).
+trClause(event(t1, [_G2219, _G2222]), event(complexEvent2, [_G2219, _G2222])).
+trClause(event(temp_e_2(t2, t4), [_G2240, _G2243]), seq(not_bkEdb(goal(event(temp_e_2(t2, t4)), event(temp_e_3(t5, t6), [_G2260, _G2263]), event(complexEvent1))), ins(goal(event(temp_e_3(t5, t6)), event(temp_e_2(t2, t4), [_G2240, _G2243]), event(complexEvent1))))).
+trClause(event(temp_e_2(t2, t4), [_G2293, _G2296]), seq(del(goal(event(temp_e_2(t2, t4)), event(temp_e_3(t5, t6), [_G2240, _G2243]), event(complexEvent1))), seq(less(_G2293, _G2243), seq(min(_G2240, _G2293, _G2332), seq(max(_G2243, _G2296, _G2339), event(complexEvent1, [_G2332, _G2339])))))).
+trClause(event(temp_e_3(t5, t6), [_G2240, _G2243]), seq(not_bkEdb(goal(event(temp_e_3(t5, t6)), event(temp_e_2(t2, t4), [_G2376, _G2379]), event(complexEvent1))), ins(goal(event(temp_e_2(t2, t4)), event(temp_e_3(t5, t6), [_G2240, _G2243]), event(complexEvent1))))).
+trClause(event(temp_e_3(t5, t6), [_G2293, _G2296]), seq(del(goal(event(temp_e_3(t5, t6)), event(temp_e_2(t2, t4), [_G2240, _G2243]), event(complexEvent1))), seq(less(_G2293, _G2243), seq(min(_G2240, _G2293, _G2332), seq(max(_G2243, _G2296, _G2339), event(complexEvent1, [_G2332, _G2339])))))).
+trClause(event(t5, [_G2472, _G2475]), ins(goal(event(t6), event(t5, [_G2472, _G2475]), event(temp_e_3(t5, t6))))).
+trClause(event(t6, [_G2503, _G2506]), seq(db(goal(event(t6), event(t5, [_G2472, _G2475]), event(temp_e_3(t5, t6)))), seq(del(goal(event(t6), event(t5, [_G2472, _G2475]), event(temp_e_3(t5, t6)))), seq(less(_G2475, _G2503), event(temp_e_3(t5, t6), [_G2472, _G2506]))))).
+trClause(event(t2, [_G2574, _G2577]), ins(goal(event(t4), event(t2, [_G2574, _G2577]), event(temp_e_2(t2, t4))))).
+trClause(event(t4, [_G2605, _G2608]), seq(db(goal(event(t4), event(t2, [_G2574, _G2577]), event(temp_e_2(t2, t4)))), seq(del(goal(event(t4), event(t2, [_G2574, _G2577]), event(temp_e_2(t2, t4)))), seq(less(_G2577, _G2605), event(temp_e_2(t2, t4), [_G2574, _G2608]))))).
+trClause(event(t1, [_G2676, _G2679]), ins(goal(event(temp_e_1(t2, t3)), event(t1, [_G2676, _G2679]), event(complexEvent0)))).
+trClause(event(temp_e_1(t2, t3), [_G2707, _G2710]), seq(db(goal(event(temp_e_1(t2, t3)), event(t1, [_G2676, _G2679]), event(complexEvent0))), seq(del(goal(event(temp_e_1(t2, t3)), event(t1, [_G2676, _G2679]), event(complexEvent0))), seq(less(_G2679, _G2707), event(complexEvent0, [_G2676, _G2710]))))).
+trClause(event(t2, [_G2778, _G2781]), ins(goal(event(t3), event(t2, [_G2778, _G2781]), event(temp_e_1(t2, t3))))).
+trClause(event(t3, [_G2809, _G2812]), seq(db(goal(event(t3), event(t2, [_G2778, _G2781]), event(temp_e_1(t2, t3)))), seq(del(goal(event(t3), event(t2, [_G2778, _G2781]), event(temp_e_1(t2, t3)))), seq(less(_G2781, _G2809), event(temp_e_1(t2, t3), [_G2778, _G2812]))))).

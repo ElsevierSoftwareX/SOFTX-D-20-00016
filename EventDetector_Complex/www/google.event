@@ -1,0 +1,16 @@
+
+counter_compEvent(Id,Counter):- 
+	((db(company(Id)) * start_compEvent) * 
+	aggregate(count, stock(Id,Price,Volume)^* ,Counter) ) * 
+	stop_compEvent.
+	
+sum_compEvent(Id,Sum):- 
+	((db(company(Id)) * start_compEvent) * 
+	aggregate(sum(Price), stock(Id,Price,Volume)^* ,Sum) ) * 
+	stop_compEvent.
+	
+avg(Id,Average):- 
+	(counter_compEvent(Id,Counter) /\ sum_compEvent(Id,Sum) ) * 
+	prolog(is(Average,Sum/Counter)).
+
+db(company('GOOG')).

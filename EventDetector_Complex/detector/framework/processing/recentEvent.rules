@@ -1,0 +1,126 @@
+% Input atomic events
+print_trigger(kickingTheBall/5).
+print_trigger(ballPossession/9).
+print_trigger(ballDeflection/5).
+print_trigger(ballOut/1).
+print_trigger(goal/3).
+print_trigger(penalty/5).
+print_trigger(foul/5).
+print_trigger(offside/2).
+
+% Output complex events
+print_trigger(pass/5).
+print_trigger(passThenGoal/5).
+print_trigger(filteringPass/5).
+print_trigger(filteringPassThenGoal/5).
+print_trigger(cross/6).
+print_trigger(crossThenGoal/5).
+print_trigger(shot/4).
+print_trigger(shotOut/4).
+print_trigger(shotThenGoal/4).
+print_trigger(savedShot/9).
+print_trigger(gameStop/1).
+
+% UNCOMMENT FOR DEBUG:
+% print_trigger(region/2).
+% region(BpId,Br,Left,BtId,Bf,SHframe,TeamSide) <- ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where(latLngToRegion(Bx,By,Br),getLeft(Left),getSHframe(SHframe),getTeamSide(BtId,Bf,SHframe,TeamSide)).
+% print_trigger(region/2).
+% print_trigger(cross_and_pass/6).
+% print_trigger(playerId/2).
+% region(KpId,Kr) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) where(latLngToRegion(Kx,Ky,Kr)).
+% playerId(BDtId,GKID) <- ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where getGK(BDtId,GKID).
+% region(BDltpId,BDr) <- ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where (latLngToRegion(BDx,BDy,BDr)).
+% print_trigger(playerside/3).
+% playerside(KpId,Ps,TeamSide) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) where(getPlayerPosSide(Kx,Ps),getSHframe(SHframe),getTeamSide(KtId,Kf,SHframe,TeamSide)).
+gameStop(Of) <- offside(Of, OpId) where (call_gc).
+
+% Event rules (For more details visit formalism/input_output_format)
+% savedShot(Kf,BDf,KpId,KtId,BDltpId,BDtId,BDx,BDy,insideGoalArea) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where (BDf>Kf,BDf-Kf<500,getGK(BDtId,GKID),BDltpId=GKID,latLngToRegion(Kx,Ky,Kr),getInsideGoalArea(insideGoalArea),Kr=insideGoalArea).
+% shot(Kf,BDf,KpId,KtId) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where (BDf>Kf,BDf-Kf<500,getGK(BDtId,GKID),BDltpId=GKID,latLngToRegion(Kx,Ky,Kr),getInsideGoalArea(insideGoalArea),Kr=insideGoalArea,call_gc).
+% kickingTheBall(Kf,KpId,KtId,Kx,Ky) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where (BDf>Kf,BDf-Kf<500,getGK(BDtId,GKID),BDltpId=GKID,latLngToRegion(Kx,Ky,Kr),getInsideGoalArea(insideGoalArea),Kr=insideGoalArea,call_gc).
+
+% savedShot(Kf,BDf,KpId,KtId,BDltpId,BDtId,BDx,BDy,insidePenaltyArea) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where (BDf>Kf,BDf-Kf<500,getGK(BDtId,GKID),BDltpId=GKID,latLngToRegion(Kx,Ky,Kr),getInsidePenaltyArea(insidePenaltyArea),Kr=insidePenaltyArea).
+% shot(Kf,BDf,KpId,KtId) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where (BDf>Kf,BDf-Kf<500,getGK(BDtId,GKID),BDltpId=GKID,latLngToRegion(Kx,Ky,Kr),getInsidePenaltyArea(insidePenaltyArea),Kr=insidePenaltyArea,call_gc).
+% kickingTheBall(Kf,KpId,KtId,Kx,Ky) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where (BDf>Kf,BDf-Kf<500,getGK(BDtId,GKID),BDltpId=GKID,latLngToRegion(Kx,Ky,Kr),getInsidePenaltyArea(insidePenaltyArea),Kr=insidePenaltyArea,call_gc).
+
+% savedShot(Kf,BDf,KpId,KtId,BDltpId,BDtId,BDx,BDy,fromOutsideArea) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where (BDf>Kf,BDf-Kf<500,getGK(BDtId,GKID),BDltpId=GKID,latLngToRegion(Kx,Ky,Kr),getInsideGoalArea(insideGoalArea),getInsidePenaltyArea(insidePenaltyArea),Kr\=insidePenaltyArea,Kr\=insideGoalArea).
+% shot(Kf,BDf,KpId,KtId) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where (BDf>Kf,BDf-Kf<500,getGK(BDtId,GKID),BDltpId=GKID,latLngToRegion(Kx,Ky,Kr),getInsideGoalArea(insideGoalArea),getInsidePenaltyArea(insidePenaltyArea),Kr\=insidePenaltyArea,Kr\=insideGoalArea,call_gc).
+% kickingTheBall(Kf,KpId,KtId,Kx,Ky) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where (BDf>Kf,BDf-Kf<500,getGK(BDtId,GKID),BDltpId=GKID,latLngToRegion(Kx,Ky,Kr),getInsideGoalArea(insideGoalArea),getInsidePenaltyArea(insidePenaltyArea),Kr\=insidePenaltyArea,Kr\=insideGoalArea,call_gc).
+
+% savedShot(Kf,BDf,KpId,KtId,BDltpId,BDtId,BDx,BDy,onFoul) <- foul(Ff,FvpId,FvtId,FfpId,FftId,FpId,Fpx,Fpy) seq ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where (BDf>Ff,getOnFoul(onFoul)).
+% shot(Kf,BDf,KpId,KtId) <- foul(Ff,FvpId,FvtId,FfpId,FftId,FpId,Fpx,Fpy) seq ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where (BDf>Ff,getOnFoul(onFoul)).
+% savedShot(Kf,BDf,KpId,KtId,BDltpId,BDtId,BDx,BDy,onPenalty) <- penalty(Pf,PvpId,PvtId,PfpId,PftId,PpId,Ppx,Ppy) seq ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where (BDf>Pf,getOnPenalty(onPenalty)).
+% shot(Kf,BDf,KpId,KtId) <- penalty(Pf,PvpId,PvtId,PfpId,PftId,PpId,Ppx,Ppy) seq ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where (BDf>Pf,getOnPenalty(onPenalty)).
+
+% shot(Kf,Bf,KpId,KtId) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (BDf>Kf,Bf>BDf,Bf-Kf<350,KtId\=BDtId,getGK(BDtId,GKID),BDltpId\=GKID).
+
+shotOut(Kf,BOf,KpId,KtId) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballOut(BOf) where (BOf>Kf,BOf-Kf<250,getPlayerPosSide(Kx,Pps),getSHframe(SHframe),getTeamSide(KtId,Kf,SHframe,TeamSide),TeamSide\=Pps). 
+shot(Kf,BOf,KpId,KtId) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballOut(BOf) where (BOf>Kf,BOf-Kf<250,getPlayerPosSide(Kx,Pps),getSHframe(SHframe),getTeamSide(KtId,Kf,SHframe,TeamSide),TeamSide\=Pps,call_gc).
+
+shotThenGoal(Kf,Gf,GsId,GtId) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq goal(Gf,GsId,GtId) where (Gf>Kf,Gf-Kf<500).
+shot(Kf,Gf,KpId,KtId) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq goal(Gf,GsId,GtId) where (Gf>Kf,Gf-Kf<500).
+
+filteringPass(Kf,Bf,KpId,KtId,BpId) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId=BtId,BpId\=KpId,Bf>Kf,Bf-Kf<500,getLeft(Left),getSHframe(SHframe),getTeamSide(BtId,Bf,SHframe,TeamSide),TeamSide=Left,Bootdpx<Bx).
+filteringPass(Kf,Bf,KpId,KtId,BpId) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId=BtId,BpId\=KpId,Bf>Kf,Bf-Kf<500,getLeft(Left),getSHframe(SHframe),getTeamSide(BtId,Bf,SHframe,TeamSide),TeamSide\=Left,Bootdpx>Bx).
+cross(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId=BtId,Bf>Kf,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Bx,By,Br),getSide(Side),getCenter(Center),Kr=Side,Br=Center,getTrue(Co)).
+cross(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId=BtId,Bf>Kf,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Bx,By,Br),getSide(Side),getInsidePenaltyArea(insidePenalty), Kr=Side,Br=insidePenaltyArea,getFalse(Co)).
+cross(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId=BtId,Bf>Kf,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Bx,By,Br),getSide(Side),getInsideGoalArea(insideGoalArea),Kr=Side,Br=insideGoalArea,getTrue(Co)).
+cross(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId\=BtId,Bf>Kf,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Bx,By,Br),getSide(Side),getCenter(Center),Kr=Side,Br=Center,getFalse(Co)).
+cross(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId\=BtId,Bf>Kf,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Bx,By,Br),getSide(Side),getInsidePenaltyArea(insidePenaltyArea),Kr=Side,Br=insidePenaltyArea,getFalse(Co)).
+cross(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId\=BtId,Bf>Kf,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Bx,By,Br),getSide(Side),getInsideGoalArea(insideGoalArea),Kr=Side,Br=insideGoalArea,getFalse(Co)).
+
+filteringPass_and_cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId=BtId,BpId\=KpId,Bf>Kf,Bf-Kf<500,getLeft(Left),getSHframe(SHframe),getTeamSide(BtId,Bf,SHframe,TeamSide),TeamSide=Left,Bootdpx<Bx,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Bx,By,Br),getSide(Side),getCenter(Center),Kr=Side,Br=Center,getTrue(Co),call_gc).
+filteringPass_and_cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId=BtId,BpId\=KpId,Bf>Kf,Bf-Kf<500,getLeft(Left),getSHframe(SHframe),getTeamSide(BtId,Bf,SHframe,TeamSide),TeamSide=Left,Bootdpx<Bx,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Bx,By,Br),getSide(Side),getInsidePenaltyArea(insidePenaltyArea),Kr=Side,Br=insidePenaltyArea,getTrue(Co),call_gc).
+filteringPass_and_cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId=BtId,BpId\=KpId,Bf>Kf,Bf-Kf<500,getLeft(Left),getSHframe(SHframe),getTeamSide(BtId,Bf,SHframe,TeamSide),TeamSide=Left,Bootdpx<Bx,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Bx,By,Br),getSide(Side),getInsideGoalArea(insideGoalArea),Kr=Side,Br=insideGoalArea,getTrue(Co),call_gc).
+filteringPass_and_cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId\=BtId,BpId\=KpId,Bf>Kf,Bf-Kf<500,getLeft(Left),getSHframe(SHframe),getTeamSide(BtId,Bf,SHframe,TeamSide),TeamSide=Left,Bootdpx<Bx,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Bx,By,Br),getSide(Side),getCenter(Center),Kr=Side,Br=Center,getFalse(Co),call_gc).
+filteringPass_and_cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId\=BtId,BpId\=KpId,Bf>Kf,Bf-Kf<500,getLeft(Left),getSHframe(SHframe),getTeamSide(BtId,Bf,SHframe,TeamSide),TeamSide=Left,Bootdpx<Bx,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Bx,By,Br),getSide(Side),getInsidePenaltyArea(insidePenaltyArea),Kr=Side,Br=insidePenaltyArea,getFalse(Co),call_gc).
+filteringPass_and_cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId\=BtId,BpId\=KpId,Bf>Kf,Bf-Kf<500,getLeft(Left),getSHframe(SHframe),getTeamSide(BtId,Bf,SHframe,TeamSide),TeamSide=Left,Bootdpx<Bx,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Bx,By,Br),getSide(Side),getInsideGoalArea(insideGoalArea),Kr=Side,Br=insideGoalArea,getFalse(Co),call_gc).
+filteringPass_and_cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId=BtId,BpId\=KpId,Bf>Kf,Bf-Kf<500,getLeft(Left),getSHframe(SHframe),getTeamSide(BtId,Bf,SHframe,TeamSide),TeamSide\=Left,Bootdpx>Bx,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Bx,By,Br),getSide(Side),getCenter(Center),Kr=Side,Br=Center,getTrue(Co),call_gc).
+filteringPass_and_cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId=BtId,BpId\=KpId,Bf>Kf,Bf-Kf<500,getLeft(Left),getSHframe(SHframe),getTeamSide(BtId,Bf,SHframe,TeamSide),TeamSide\=Left,Bootdpx>Bx,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Bx,By,Br),getSide(Side),getInsidePenaltyArea(insidePenaltyArea),Kr=Side,Br=insidePenaltyArea,getTrue(Co),call_gc).
+filteringPass_and_cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId=BtId,BpId\=KpId,Bf>Kf,Bf-Kf<500,getLeft(Left),getSHframe(SHframe),getTeamSide(BtId,Bf,SHframe,TeamSide),TeamSide\=Left,Bootdpx>Bx,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Bx,By,Br),getSide(Side),getInsideGoalArea(insideGoalArea),Kr=Side,Br=insideGoalArea,getTrue(Co),call_gc).
+filteringPass_and_cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId\=BtId,BpId\=KpId,Bf>Kf,Bf-Kf<500,getLeft(Left),getSHframe(SHframe),getTeamSide(BtId,Bf,SHframe,TeamSide),TeamSide\=Left,Bootdpx>Bx,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Bx,By,Br),getSide(Side),getCenter(Center),Kr=Side,Br=Center,getFalse(Co),call_gc).
+filteringPass_and_cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId\=BtId,BpId\=KpId,Bf>Kf,Bf-Kf<500,getLeft(Left),getSHframe(SHframe),getTeamSide(BtId,Bf,SHframe,TeamSide),TeamSide\=Left,Bootdpx>Bx,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Bx,By,Br),getSide(Side),getInsidePenaltyArea(insidePenaltyArea),Kr=Side,Br=insidePenaltyArea,getFalse(Co),call_gc).
+filteringPass_and_cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId\=BtId,BpId\=KpId,Bf>Kf,Bf-Kf<500,getLeft(Left),getSHframe(SHframe),getTeamSide(BtId,Bf,SHframe,TeamSide),TeamSide\=Left,Bootdpx>Bx,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Bx,By,Br),getSide(Side),getInsideGoalArea(insideGoalArea),Kr=Side,Br=insideGoalArea,getFalse(Co),call_gc).
+
+filteringPass_and_pass(Kf,Bf,KpId,KtId,BpId) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId=BtId,BpId\=KpId,Bf>Kf,Bf-Kf<500,getLeft(Left),getSHframe(SHframe),getTeamSide(BtId,Bf,SHframe,TeamSide),TeamSide=Left,Bootdpx<Bx, call_gc).
+filteringPass_and_pass(Kf,Bf,KpId,KtId,BpId) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId=BtId,BpId\=KpId,Bf>Kf,Bf-Kf<500,getLeft(Left),getSHframe(SHframe),getTeamSide(BtId,Bf,SHframe,TeamSide),TeamSide\=Left,Bootdpx>Bx, call_gc).
+
+cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId=BtId,Bf>Kf,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Bx,By,Br),getSide(Side),getCenter(Center),Kr=Side,Br=Center,getTrue(Co),call_gc).
+cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId=BtId,Bf>Kf,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Bx,By,Br),getSide(Side),getInsidePenaltyArea(insidePenaltyArea),Kr=Side,Br=insidePenaltyArea,getTrue(Co),call_gc).
+cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId=BtId,Bf>Kf,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Bx,By,Br),getSide(Side),getInsideGoalArea(insideGoalArea),Kr=Side,Br=insideGoalArea,getTrue(Co),call_gc).
+cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId\=BtId,Bf>Kf,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Bx,By,Br),getSide(Side),getCenter(Center),Kr=Side,Br=Center,getFalse(Co),call_gc).
+cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId\=BtId,Bf>Kf,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Bx,By,Br),getSide(Side),getInsidePenaltyArea(insidePenaltyArea),Kr=Side,Br=insidePenaltyArea,getFalse(Co),call_gc).
+cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId\=BtId,Bf>Kf,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Bx,By,Br),getSide(Side),getInsideGoalArea(insideGoalArea),Kr=Side,Br=insideGoalArea,getFalse(Co),call_gc).
+
+% cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq kickingTheBall(Kf2,KpId2,KtId2,Kx2,Ky2) where (KtId=KtId2,Kf2>Kf,Kf2-Kf<500,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Kx2,Ky2,Kr2),getSide(Side),getInsidePenaltyArea(insidePenaltyArea),Kr=Side,Kr2=insidePenaltyArea,getTrue(Co),call_gc).
+% cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq kickingTheBall(Kf2,KpId2,KtId2,Kx2,Ky2) where (KtId=KtId2,Kf2>Kf,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Kx2,Ky2,Kr2),getSide(Side),getCenter(Center),Kr=Side,Kr2=Center,getTrue(Co),call_gc).
+% cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq kickingTheBall(Kf2,KpId2,KtId2,Kx2,Ky2) where (KtId=KtId2,Kf2>Kf,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Kx2,Ky2,Kr2),getSide(Side),getInsideGoalArea(insideGoalArea),Kr=Side,Kr2=insideGoalArea,getTrue(Co),call_gc).
+% cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq kickingTheBall(Kf2,KpId2,KtId2,Kx2,Ky2) where (KtId\=KtId2,Kf2>Kf,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Kx2,Ky2,Kr2),getSide(Side),getInsidePenaltyArea(insidePenaltyArea),Kr=Side,Kr2=insidePenaltyArea,getFalse(Co),call_gc).
+% cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq kickingTheBall(Kf2,KpId2,KtId2,Kx2,Ky2) where (KtId\=KtId2,Kf2>Kf,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Kx2,Ky2,Kr2),getSide(Side),getCenter(Center),Kr=Side,Kr2=Center,getFalse(Co),call_gc).
+% cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq kickingTheBall(Kf2,KpId2,KtId2,Kx2,Ky2) where (KtId\=KtId2,Kf2>Kf,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Kx2,Ky2,Kr2),getSide(Side),getInsideGoalArea(insideGoalArea),Kr=Side,Kr2=insideGoalArea,getFalse(Co),call_gc).
+
+pass(Kf,Bf,KpId,KtId,BpId) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy) where (KtId=BtId,KpId\=BpId,Bf>Kf,Bf-Kf<500,call_gc).
+
+% Extreme cases
+cross(Kf,Kf2,KpId,KtId,KpId2,Co) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq kickingTheBall(Kf2,KpId2,KtId2,Kx2,Ky2) where (KtId=KtId2,Kf2>Kf,latLngToRegion(Kx,Ky,Kr),latLngToRegion(Kx2,Ky2,Kr2),getSide(Side),getInsidePenaltyArea(insidePenaltyArea),Kr=Side,Kr2=insidePenaltyArea,getTrue(Co)).
+pass(Kf,Kf2,KpId,KtId,KpId2) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq kickingTheBall(Kf2,KpId2,KtId2,Kx2,Ky2) where (KtId=KtId2,KpId\=KpId2,Kf2>Kf,Kf2-Kf<500).
+kickingTheBall(Kf2,KpId2,KtId2,Kx2,Ky2) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq kickingTheBall(Kf2,KpId2,KtId2,Kx2,Ky2) where (KtId=KtId2,KpId\=KpId2,Kf2>Kf,Kf2-Kf<500).
+
+% Case of FilteringPass, Cross, Pass
+pass(Kf,Bf,KpId,KtId,BpId) <- filteringPass_and_cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) seq goal(Gf,GsId,GtId) where (Gf>Bf,GtId=KtId,GsId=BpId).
+filteringPassThenGoal(Kf,Gf,KpId,KtId,BpId) <- filteringPass_and_cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) seq goal(Gf,GsId,GtId) where (Gf>Bf,GtId=KtId,GsId=BpId).
+crossThenGoal(Kf,Gf,KpId,KtId,BpId) <- filteringPass_and_cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) seq goal(Gf,GsId,GtId) where (Gf>Bf,GtId=KtId,GsId=BpId).
+passThenGoal(Kf,Gf,KpId,KtId,BpId) <- filteringPass_and_cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) seq goal(Gf,GsId,GtId) where (Gf>Bf,GtId=KtId,GsId=BpId, call_gc).
+
+% Case of FilteringPass and Pass, and Goal
+filteringPassThenGoal(Kf,Gf,KpId,KtId,BpId) <- filteringPass_and_pass(Kf,Bf,KpId,KtId,BpId) seq goal(Gf,GsId,GtId) where (Gf>Bf,GtId=KtId,GsId=BpId).
+passThenGoal(Kf,Gf,KpId,KtId,BpId) <- filteringPass_and_pass(Kf,Bf,KpId,KtId,BpId) seq goal(Gf,GsId,GtId) where (Gf>Bf,GtId=KtId,GsId=BpId).
+
+% Case of Cross and Pass, and Goal
+% region(KpId,Kr) <- cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) seq kickingTheBall(Kf,KpId,KtId,Kx,Ky) where (Kf>Bf,KpId\=BpId,latLngToRegion(Kx,Ky,Kr),call_gc).
+crossThenGoal(Kf,Gf,KpId,KtId,BpId) <- cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) seq goal(Gf,GsId,GtId) where (Gf>Bf,GtId=KtId,GsId=BpId).
+passThenGoal(Kf,Gf,KpId,KtId,BpId) <- cross_and_pass(Kf,Bf,KpId,KtId,BpId,Co) seq goal(Gf,GsId,GtId) where (Gf>Bf,GtId=KtId,GsId=BpId, call_gc).
+
+filteringPassThenGoal(Kf,Gf,KpId,KtId,BpId) <- filteringPass(Kf,Bf,KpId,KtId,BpId) seq goal(Gf,GsId,GtId) where (Gf>Bf,GtId=KtId,GsId=BpId).
+crossThenGoal(Kf,Gf,KpId,KtId,BpId) <- cross(Kf,Bf,KpId,KtId,BpId,Co) seq goal(Gf,GsId,GtId) where (Gf>Bf,GtId=KtId,GsId=BpId).
+passThenGoal(Kf,Gf,KpId,KtId,BpId) <- pass(Kf,Bf,KpId,KtId,BpId) seq goal(Gf,GsId,GtId) where (Gf>Bf,GtId=KtId,GsId=BpId, call_gc).

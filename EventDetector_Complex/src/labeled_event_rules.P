@@ -1,0 +1,56 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+:- dynamic(event_rule_property/3).
+% event_rule_property(+Label,+PropertyName,+PropertyValue)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+check_event_rule_conditions(Label,Head,[T1,T2]):-
+        findall(
+                event_rule_property(Label,PropertyName,PropertyValue),
+                event_rule_property(Label,PropertyName,PropertyValue),
+                ListERProperties),
+        check_event_rule_conditions_internal(Label,Head,[T1,T2],
+                ListERProperties),
+        !.
+
+% check_event_rule_conditions_internal/4
+% check_event_rule_conditions_internal
+%	 (+Label,+Head,[+T1,+T2],+ListERProperties)
+%       check all properties for the event rule with the given label
+%       and Head
+check_event_rule_conditions_internal(_Label,_Head,[_T1,_T2],[]):-
+	!.
+check_event_rule_conditions_internal(Label,Head,[T1,T2],[H|RestProperties]):-
+        check_event_rule_condition(Label,Head,[T1,T2],H),
+        check_event_rule_conditions_internal(Label,Head,[T1,T2],
+        	RestProperties),
+        !.
+
+% check_event_rule_condition/4
+% check_event_rule_condition(+Label,+Head,[+T1,+T2],
+%        event_rule_property(+Label,+PropertyName,+PropertyValue)).
+% checks one property
+%       add here properties to check before firing rules
+check_event_rule_condition(Label,_Head,[T1,T2],
+                event_rule_property(Label,event_rule_window,V)):-
+        !,
+        T1=datime(Y1,M1,D1,H1,Min1,S1,_Counter1),
+        T2=datime(Y2,M2,D2,H2,Min2,S2,_Counter2),
+        datime_minus_datime(datime(Y2,M2,D2,H2,Min2,S2),
+                datime(Y1,M1,D1,H1,Min1,S1),
+                RealSec),
+        ( RealSec =< V -> true ; fail ).
+% window enables both "event_rule_window" and pattern garbage collection
+check_event_rule_condition(Label,_Head,[T1,T2],
+                event_rule_property(Label,window,V)):-
+        !,
+        T1=datime(Y1,M1,D1,H1,Min1,S1,_Counter1),
+        T2=datime(Y2,M2,D2,H2,Min2,S2,_Counter2),
+        datime_minus_datime(datime(Y2,M2,D2,H2,Min2,S2),
+                datime(Y1,M1,D1,H1,Min1,S1),
+                RealSec),
+        ( RealSec =< V -> true ; fail ).
+
+%       otherwise, these are properties checked by other modules
+%       (e.g., garbage_collection)
+check_event_rule_condition(_Label,_Head,_DT,_PropertyDef).
+                

@@ -1,0 +1,98 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Flags:
+
+% etalis_justification/1: sets if the justification flag is enabled
+%	Can take the values "on" and "off".
+%	It is defined in the file compiler.P
+%  default setting:
+:- assert(etalis_justification(off)).
+
+% event_consumption_policy/1: sets the event consumtpion policy. Can be:
+%       "recent", "chronological" and "unrestricted" (defined in
+%	event_utils.P)
+%  default setting:
+%:- assert(event_consumption_policy(unrestricted)).
+:- assert(event_consumption_policy(recent)).
+
+% garbage_control/1: enables various types of garbage collection: goals older
+%       than a certain period of time are cleaned.
+%       Can have the the values defined in 'garbage_collection.P'.
+%  default setting:
+:- assert(garbage_control(off)).
+
+% garbage_window/1: sets the period of time when general garbage collection is
+%       activated
+%  default setting:
+:- assert(garbage_window(-1)).
+
+% logging/1: enables logging all the events to output.
+% 	Can take the values: "on" or "off" (defined in utils.P)
+%  default setting:
+:- assert(logging(off)).
+
+% logging_to_file/1: enable logging to an external file.
+% 	Can take values: "on" or "off"  (defined in utils.P). Use write_log/2
+% 	to log an event to a file
+%  default setting:
+:- assert(logging_to_file(off)).
+
+% output_temporary_files/1: : enables logging compiled event files (after
+%       binarization and compilation). Can have the values: "on" or "off"
+%       (defined in event_utils.P)
+%  default setting:
+:- assert(output_temporary_files(off)).
+
+% out_of_order/1: enables detection of events out out of order. Can have the
+%       values: "on" or "off"  (defined in compiler.P)
+%  default setting:
+:- assert(out_of_order(off)).
+
+% prolog_backend/1: sets the prolog backend. Can be: "swi", "xsb", "yap" and
+%       "sicstus" (defined in event_utils.P)
+%  default setting:
+:- assert(prolog_backend(swi)).
+
+% revision_flag/1: enables revision in detection of events. Can have the
+%       values: "on" or "off"  (defined in compiler.P)
+%  default setting:
+:- assert(revision_flag(off)).
+
+% rule_sharing/1: sets the sharing in execution between rule bodies.
+%       Can be: "on" and "off" (defined in binrizer.P)
+%  default setting:
+:- assert(rule_sharing(off)).
+
+% rule_sharing_debuging/1: sets the sharing debuging.
+%       Can be: "on" and "off" (defined in binrizer.P)
+%  default setting:
+:- assert(rule_sharing_debuging(off)).
+
+% store_fired_events/1: enables storing all the events fired. Can have the
+%       values: "on" or "off" (defined in utils.P)
+%  default setting:
+:- assert(store_fired_events(off)).
+
+% store_fired_events_java/1: enables storing fired events for the Java 
+%	interface 
+% Can have the values: "on" or "off" (defined in java_interface.P)
+%  default setting:
+:- assert(store_fired_events_java(off)).
+
+% set_etalis_flag/2
+% set_etalis_flag(+Flag,+Value)
+set_etalis_flag(X,Y):-
+        Z1 =.. [X,_],
+        retractall(Z1),
+        Z2 =.. [X,Y],
+        assert(Z2),
+        !.
+
+% get_etalis_flag/2
+% get_etalis_flag(+Flag,-Value)
+get_etalis_flag(X,Y):-
+        Z1 =.. [X,Y],
+        call(Z1),
+        !.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

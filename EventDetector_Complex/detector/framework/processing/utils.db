@@ -1,0 +1,132 @@
+getSHframe(54000000) :-
+        0=0,
+        !.
+        
+getGK(TeamId,18) :-
+        TeamId = 1,
+        !.
+
+getGK(TeamId,0) :-
+        TeamId = 0,
+        !.        
+
+getTeamSide(Away,F,SHF,'Left')        :-
+        Away = 0,
+        F < SHF,
+        !.
+
+getTeamSide(Away,F,SHF,'Right')         :-
+        Away = 1,
+        F < SHF,
+        !.
+
+getTeamSide(Away,F,SHF,'Left')         :-
+        Away = 1,
+        F > SHF,
+        !.
+
+getTeamSide(Away,F,SHF,'Right')         :-
+        Away = 0,
+        F > SHF,
+        !.
+
+getCenter('Center')                     :-
+	0=0,
+	!.
+
+getSide('Side')                         :-
+	0=0,
+	!.
+
+getTrue('true')                         :-
+	0=0,
+	!.
+
+getFalse('false')                       :-
+	0=0,
+	!.
+
+getRight('Right')                       :-
+	0=0,
+	!.
+
+getLeft('Left')                         :-
+	0=0,
+	!.
+
+getInsideGoalArea('insideGoalArea')     :-
+	0=0,
+	!.
+
+getInsidePenaltyArea('insidePenaltyArea') :-
+	0=0,
+	!.
+
+getFromOutsideArea('fromOutsideArea')   :-
+	0=0,
+	!.
+
+getOnFoul('onFoul')   			:-
+	0=0,
+	!.
+
+getOnPenalty('onPenalty')		:-
+	0=0,
+	!.
+
+latLngToRegion(X,Y,'Side')              :-
+        0=<X,X<110,
+        0=<Y,Y<15.85,
+        !.
+
+latLngToRegion(X,Y,'Side')              :-
+        0=<X,X<110,
+        56.15=<Y,Y<72,
+        !.
+
+latLngToRegion(X,Y,'insideGoalArea')    :-
+        0=<X,X<5.5,
+        26.85=<Y,Y<45.15,
+        !.
+
+latLngToRegion(X,Y,'insideGoalArea')    :-
+        104.5=<X,X<110,
+        26.85=<Y,Y<45.15,
+        !.
+
+latLngToRegion(X,Y,'insidePenaltyArea') :-
+        0=<X,X<16.5,
+        15.85=<Y,Y<56.15,
+        !.
+
+latLngToRegion(X,Y,'insidePenaltyArea') :-
+        93.5=<X,X<110,
+        15.85=<Y,Y<56.15,
+        !.
+
+latLngToRegion(X,Y,'Center')            :-
+        0=<X,X<27.5,
+	15.85=<Y,Y<56.15,
+        !.
+
+latLngToRegion(X,Y,'Center')            :-
+        82.5=<X,X<110,
+	15.85=<Y,Y<56.15,
+        !.
+
+latLngToRegion(X,Y,'fromOutsideArea')   :-
+        15.85=<Y,Y<56.15,
+        16.5=<X,X<93.5,
+        !.
+
+getPlayerPosSide(X,'Left')               :-
+        0<X,X<55,
+        !.
+
+getPlayerPosSide(X,'Right')              :-
+        55<X,X<110,
+        !.
+
+%% Reference dimensions
+%% https://www.dsr.wa.gov.au/support-and-advice/facility-management/developing-facilities/dimensions-guide/sport-specific-dimensions/football-(soccer)#site-top
+%%

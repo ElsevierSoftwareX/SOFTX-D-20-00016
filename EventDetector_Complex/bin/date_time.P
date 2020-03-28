@@ -1,0 +1,308 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Date and Time
+
+% current_datime(-D)
+%  returns the current date and time
+current_datime(D):- % Yap
+        prolog_backend(yap),
+        !,
+        D = datime(2010,1,1,0,0,0).
+%:- import datime/1 from standard.
+current_datime(D):-
+        prolog_backend(xsb),
+        %datime(D). % for XSB Prolog
+        D=datime(2010,10,30,0,0,0).
+current_datime(D):- % Sicstus
+        prolog_backend(sicstus),
+        !,
+        use_module(library(system)),
+        datime(D).
+current_datime(DTdef):- % for SWI or Quintus
+        prolog_backend(swi),
+        !,
+        DTdef=datime(Y,M,D,H,Min,Sec),
+        get_time(TimeStamp),
+        stamp_date_time(TimeStamp,date(Y,M,D,H,Min,Sec1,_,_,_),0),
+        floor(Sec1,Sec).
+%        datime(D).
+% Yap cannot query for time under Windows
+%       ( http://www.dcc.fc.up.pt/~vsc/Yap/yap.html#SEC77 )
+
+% absoluteTime(T,AbsoluteTime) - althought this predicate is easy to use, it
+%       generates numbers too big to be stored in integer
+%absoluteTime(T,AbsoluteTime):-
+%        T = datime(Y,M,D,H,Min,S,Counter),
+%        AbsoluteTime is (((((((Y-1980)*365)+(M*31)+D)*24)+H)*60)+Min)*60+S.
+absoluteTime(T,AbsoluteTime):-
+        T = datime(_Y,_M,_D,H,Min,S,_Counter),
+        AbsoluteTime is (H*60+Min)*60+S.
+
+% is_datime(+T)
+% returns true if T is a datime (with or without conter in date)
+is_datime(datime(_Year,_Month,_Day,_Hour,_Min,_Sec,_Counter)):-
+        !.
+is_datime(datime(_Year,_Month,_Day,_Hour,_Min,_Sec)):-
+        !.
+
+% less_datime(T1,T2)
+less_datime(datime(T1_Y,T1_M,T1_D,T1_H,T1_Min,T1_S,T1_Counter),
+                datime(T2_Y,T2_M,T2_D,T2_H,T2_Min,T2_S,T2_Counter)):-
+        (
+                ( T1_Y < T2_Y );
+                ( T1_Y = T2_Y, T1_M < T2_M );
+                ( T1_Y = T2_Y, T1_M = T2_M, T1_D < T2_D );
+                ( T1_Y = T2_Y, T1_M = T2_M, T1_D = T2_D, T1_H < T2_H );
+                ( T1_Y = T2_Y, T1_M = T2_M, T1_D = T2_D, T1_H = T2_H,
+                        T1_Min < T2_Min );
+                ( T1_Y = T2_Y, T1_M = T2_M, T1_D = T2_D, T1_H = T2_H,
+                        T1_Min = T2_Min, T1_S < T2_S );
+                ( T1_Y = T2_Y, T1_M = T2_M, T1_D = T2_D, T1_H = T2_H,
+                        T1_Min = T2_Min, T1_S = T2_S,
+                        T1_Counter < T2_Counter )
+        ),
+        !.
+
+less_datime(T1,T2):-
+        number(T1),
+        number(T2),
+        T1 < T2.
+
+equal_datime(datime(T_Y,T_M,T_D,T_H,T_Min,T_S,_T1_Counter),
+                datime(T_Y,T_M,T_D,T_H,T_Min,T_S,_T2_Counter)).
+
+% datime_plus_sec/3
+% datime_plus_sec(+Datime1,+Seconds,-Datime2)
+datime_plus_sec(datime(Y1,M1,D1,H1,Min1,S1), Sec, Datime2):-
+ NewSec is S1 + Sec,
+ ( NewSec < 60 -> Datime2=datime(Y1,M1,D1,H1,Min1,NewSec) ;
+  % Note: this program uses SWI operands
+  ( NewMin is Min1 + (NewSec//60), NewSec2 is NewSec mod 60,
+   ( NewMin < 60 -> Datime2=datime(Y1,M1,D1,H1,NewMin,NewSec2) ;
+    ( NewH is H1 + (NewMin//60), NewMin2 is NewMin mod 60,
+     ( NewH < 24 -> Datime2=datime(Y1,M1,D1,NewH,NewMin2,NewSec2) ;
+      ( NewDay is D1 + (NewH//24), NewH2 is NewH mod 24,
+       month_days(Y1,M1,MonthDays),
+       (% we consider only increments of one month from the current date
+        % however, this is not correct for long durations (over a month)
+        NewDay < MonthDays -> Datime2=datime(Y1,M1,NewDay,NewH2,NewMin2,
+          NewSec2) ;
+        ( NewMonth is M1 + 1, NewDay2 is NewDay - MonthDays,
+         ( NewMonth < 13 -> Datime2=datime(Y1,NewMonth,NewDay2,NewH2,NewMin2,
+           NewSec2) ;
+          NewYear is Y1 + 1, NewMonth2=1, Datime2=datime(NewYear,NewMonth2,
+           NewDay2,NewH2,NewMin2,NewSec2)
+         )
+        )
+       )
+      )
+     )
+    )
+   )
+  )
+ ).
+
+% addSec_Datime/1
+%       alias for datime_plus_sec
+%       kept for backward compatibility
+addSec_Datime(Seconds,Datime1,Datime2):-
+        datime_plus_sec(Datime1,Seconds,Datime2).
+
+% datime_minus_sec/3
+% datime_minus_sec(+Datime1,+Seconds,-Datime2)
+datime_minus_sec(datime(Y1,M1,D1,H1,Min1,S1), Sec, Datime2):-
+ NewSec is S1 - Sec,
+ ( NewSec >= 0 -> Datime2=datime(Y1,M1,D1,H1,Min1,NewSec) ;
+  % Note: this program uses SWI operands
+  ( NewMin is Min1 + (NewSec//60) - 1, NewSec2 is 60 - (-NewSec mod 60),
+   ( NewMin >= 0 -> Datime2=datime(Y1,M1,D1,H1,NewMin,NewSec2) ;
+    ( NewH is H1 + (NewMin//60) - 1, NewMin2 is 60 - (-NewMin mod 60),
+     ( NewH >= 0 -> Datime2=datime(Y1,M1,D1,NewH,NewMin2,NewSec2) ;
+      ( NewDay is D1 + (NewH//24) - 1, NewH2 is 24 - (-NewH mod 24),
+       month_days(Y1,M1,MonthDays),
+       (% we consider only increments of one month from the current date
+        % however, this is not correct for long durations (over a month)
+        NewDay > 0 -> Datime2=datime(Y1,M1,NewDay,NewH2,NewMin2,
+          NewSec2) ;
+        ( NewMonth is M1 - 1, NewDay2 is MonthDays + NewDay,
+         ( NewMonth > 0 -> Datime2=datime(Y1,NewMonth,NewDay2,NewH2,NewMin2,
+           NewSec2) ;
+          NewYear is Y1 - 1, NewMonth2=12, Datime2=datime(NewYear,NewMonth2,
+           NewDay2,NewH2,NewMin2,NewSec2)
+         )
+        )
+       )
+      )
+     )
+    )
+   )
+  )
+ ).
+
+% datime_minus_datime/3
+% datime_minus_datime(+Datime,+Datime1,-Seconds) - computes the number of
+%        seconds
+%       between two datimes
+% ?- datime_minus_datime(datime(2009,11,11,0,0,10),
+%       datime(2009,11,11,0,0,0),Sec).
+datime_minus_datime(datime(Y1,M1,D1,H1,Min1,S1),
+                datime(Y2,M2,D2,H2,Min2,S2),Sec):-
+        minus_Days(date(Y1,M1,D1),date(Y2,M2,D2),Days),
+        Sec is ( (S1-S2) + ((Min1-Min2)*60) + ((H1-H2)*3600) + (Days*24*3600) ),
+        !.
+
+minus_Days(date(Y1,M1,D1),date(Y1,M1,D2),Days):-
+        Days is D1-D2,
+        !.
+minus_Days(date(Y1,M1,D1),date(Y1,M2,D2),Days):-
+        M1>M2,
+        !,
+        M11 is M1-1,
+        minus_Days(date(Y1,M11,31),date(Y1,M2,D2),Days1),
+        Days is Days1+D1.
+minus_Days(date(Y1,M1,D1),date(Y1,M2,D2),Days):-
+        M1<M2,
+        !,
+        minus_Days(date(Y1,M2,D2),date(Y1,M1,D1),DaysInverted),
+        Days is (-DaysInverted).
+minus_Days(date(Y1,M1,D1),date(Y2,M2,D2),Days):-
+        Y1>Y2, Y11 is Y1-1, Y11=Y2, % longer delays are unaccptable
+        minus_Days(date(Y2,12,31),date(Y2,M2,D2),Days1),
+        minus_Days(date(Y1,M1,D1),date(Y1,1,1),Days2),
+        Days is Days1+Days2+1.
+
+month_days(_Y,1,31).
+month_days(_Y,3,31).
+month_days(_Y,4,30).
+month_days(_Y,5,31).
+month_days(_Y,6,30).
+month_days(_Y,7,31).
+month_days(_Y,8,31).
+month_days(_Y,9,30).
+month_days(_Y,10,31).
+month_days(_Y,11,30).
+month_days(_Y,12,31).
+month_days(Y1,2,MonthDays):-
+        Leap is Y1 mod 4,
+        ( Leap=0 -> MonthDays=29; MonthDays=28 ), !.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Alen's interval algebra
+validTimeInterval(TI):-
+        TI = [TI_S,TI_E],
+        TI_S @< TI_E.
+
+% 'alen<'
+'alen<'(TI,TI2):-
+        TI = [_TI_S,TI_E],
+        validTimeInterval(TI),
+        TI2 = [TI2_S,_TI2_E],
+        validTimeInterval(TI2),
+        TI \= TI2,
+        TI_E @< TI2_S.
+% 'alen>'
+'alen>'(TI,TI2):-
+        'alen<'(TI2,TI).
+
+% m
+m(TI,TI2):-
+        TI = [_TI_S,TI_E],
+        validTimeInterval(TI),
+        TI2 = [TI2_S,_TI2_E],
+        validTimeInterval(TI2),
+        TI \= TI2,
+        TI_E = TI2_S.
+% mi
+mi(TI,TI2):-
+        m(TI2,TI).
+
+% o
+o(TI,TI2):-
+        TI = [TI_S,TI_E],
+        validTimeInterval(TI),
+        TI2 = [TI2_S,TI2_E],
+        validTimeInterval(TI2),
+        TI \= TI2,
+        TI_S @< TI2_S,
+        TI_E @< TI2_E.
+% oi
+oi(TI,TI2):-
+        o(TI2,TI).
+
+% s
+s(TI,TI2):-
+        TI = [TI_S,TI_E],
+        validTimeInterval(TI),
+        TI2 = [TI2_S,TI2_E],
+        validTimeInterval(TI2),
+        TI \= TI2,
+        TI_S = TI2_S,
+        TI_E @< TI2_E.
+% si
+si(TI,TI2):-
+        s(TI2,TI).
+
+% d
+d(TI,TI2):-
+        TI = [TI_S,TI_E],
+        validTimeInterval(TI),
+        TI2 = [TI2_S,TI2_E],
+        validTimeInterval(TI2),
+        TI \= TI2,
+        TI2_S @< TI_S,
+        TI_E @< TI2_E.
+% di
+di(TI,TI2):-
+        d(TI2,TI).
+
+% f
+f(TI,TI2):-
+        TI = [TI_S,TI_E],
+        validTimeInterval(TI),
+        TI2 = [TI2_S,TI2_E],
+        validTimeInterval(TI2),
+        TI \= TI2,
+        TI_E = TI2_E,% in general,this condTIon has a better seleTIvity
+        TI2_S @< TI_S.
+% fi
+fi(TI,TI2):-
+        f(TI2,TI).
+
+% 'alen='
+'alen='(TI,TI2):-
+        TI = [TI_S,TI_E],
+        validTimeInterval(TI),
+        TI2 = [TI2_S,TI2_E],
+        validTimeInterval(TI2),
+        TI_S = TI2_S,
+        TI_E = TI2_E.
+
+% Examples:
+%  t1:  -----
+%  t2:        -----
+%  t3:       -----
+%  t4:  -----------
+%  t5:  -----
+
+timeInterval(["2009-08-01T12:00:00.000-02:30","2009-08-05T12:00:00.000-02:30"]).
+timeInterval(["2009-08-06T12:00:00.000-02:30","2009-08-11T12:00:00.000-02:30"]).
+timeInterval(["2009-08-05T12:00:00.000-02:30","2009-08-10T12:00:00.000-02:30"]).
+timeInterval(["2009-08-01T12:00:00.000-02:30","2009-08-11T12:00:00.000-02:30"]).
+timeInterval(["2009-08-01T12:00:00.000-02:30","2009-08-05T12:00:00.000-02:30"]).
+
+% queries:
+% ?- timeInterval(TI), validTimeInterval(TI).
+% ?- timeInterval(TI), timeInterval(TI2), 'alen<'(TI,TI2).
+% ?- timeInterval(TI), timeInterval(TI2), 'alen>'(TI,TI2).
+% ?- timeInterval(TI), timeInterval(TI2), m(TI,TI2).
+% ?- timeInterval(TI), timeInterval(TI2), mi(TI,TI2).
+% ?- timeInterval(TI), timeInterval(TI2), o(TI,TI2).
+% ?- timeInterval(TI), timeInterval(TI2), oi(TI,TI2).
+% ?- timeInterval(TI), timeInterval(TI2), s(TI,TI2).
+% ?- timeInterval(TI), timeInterval(TI2), si(TI,TI2).
+% ?- timeInterval(TI), timeInterval(TI2), d(TI,TI2).
+% ?- timeInterval(TI), timeInterval(TI2), di(TI,TI2).
+% ?- timeInterval(TI), timeInterval(TI2), f(TI,TI2).
+% ?- timeInterval(TI), timeInterval(TI2), fi(TI,TI2).
+% ?- timeInterval(TI), timeInterval(TI2), 'alen='(TI,TI2).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

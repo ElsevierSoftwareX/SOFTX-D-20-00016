@@ -1,0 +1,40 @@
+
+	ETALIS
+	======
+
+	Input format
+	-------------
+
+	kickingTheBall(Kf,KpId,KtId,Kx,Ky)
+	ballPossession(Bf,BpId,BtId,Bx,By,BootdpId,BootdptId,Bootdpx,Bootdpy)
+	ballDeflection(BDf,BDltpId,BDtId,x,y)
+	tackle(Tf,TvId,TvtId,Tvx,Tvy,TtId,TttId,Ttx,Tty)
+	ballOut(BOf)
+	goal(Gf,GsId,GtId)
+
+	penalty(Ff,FvpId,FvtId,FfpId,FftId,FpId,Fpx,Fpy)
+	foul(Ff,FvpId,FvtId,FfpId,FftId,FpId,Fpx,Fpy)
+
+
+	Output format
+	--------------
+
+	pass(Kf,Bf,KpId,KtId,BpId)
+	passThenGoal(Kf,Bf,KpId,KtId,BpId)
+	filteringPass(Kf,Bf,KpId,KtId,BpId)
+	filteringPassThenGoal(Kf,Bf,KpId,KtId,BpId)
+
+	cross(Kf,Bf,KpId,KtId,BpId,success)
+	cross(Kf,Bf,KpId,KtId,BpId,failure)
+	crossThenGoal(Kf,Bf,KpId,KtId,BpId)
+
+	tackle(Tf,Bf,TvId,TvtId,TtId,TttId,success)
+	tackle(Tf,Bf,TvId,TvtId,TtId,TttId,failure)
+
+	shot(Kf,BOf,KpId,KtId)
+	shotThenGoal(Kf,Gf,KpId,KtId)
+	savedShot(Kf,BDf,KpId,KtId,BDltpId,BDtId,x,y,insidePenaltyArea)
+	savedShot(Kf,BDf,KpId,KtId,BDltpId,BDtId,x,y,insideGoalArea)
+	savedShot(Kf,BDf,KpId,KtId,BDltpId,BDtId,x,y,fromOutsideArea)
+	savedShot(Kf,BDf,KpId,KtId,BDltpId,BDtId,x,y,onPenalty)
+	savedShot(Kf,BDf,KpId,KtId,BDltpId,BDtId,x,y,onFoul)

@@ -1,0 +1,17 @@
+%Some complex events :
+%=====================
+
+%Sequence :
+complexEvent0     :- t1 * t2 * t3.
+%Sequence combined with concurrency :
+%complexEvent1     :- (t2 * t4) # (t5 * t6).
+%Disjunction :
+%complexEvent2     :- t0 \/ t1.
+%Sequence combined with disjunction :
+%complexEvent3     :- (t1 * t2 * t3) \/ (t4*t5).
+%Sequence combined with negation :
+%complexEvent4     :- (t5 * t6) cnot t7.
+%Complex event combined with another complex event 
+complexEvent5     :- (complexEvent0 \/ complexEvent2) cnot complexEvent4.
+%Ntimes combined with sequence :
+%complexEvent_ntimes :- t0^ * t8.

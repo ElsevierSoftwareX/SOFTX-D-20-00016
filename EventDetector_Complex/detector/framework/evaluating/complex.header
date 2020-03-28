@@ -1,0 +1,12 @@
+Pass sender teamId receiver
+PassThenGoal sender teamId scorer
+FilteringPass sender teamId receiver
+FilteringPassThenGoal sender teamId
+Cross sender teamId receiver outcome
+CrossThenGoal sender teamId scorer
+Tackle
+SlidingTackle victimId teamId tacklerId outcome
+Shot shooterId teamId
+ShotOut shooterId teamId
+ShotThenGoal shooterId teamId
+SavedShot shooterId teamId goalkeeperId

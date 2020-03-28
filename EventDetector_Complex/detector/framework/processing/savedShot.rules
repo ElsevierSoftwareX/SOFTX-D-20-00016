@@ -1,0 +1,28 @@
+% Input atomic events
+print_trigger(kickingTheBall/5).
+print_trigger(ballPossession/9).
+print_trigger(ballDeflection/5).
+print_trigger(ballOut/1).
+print_trigger(goal/3).
+print_trigger(penalty/5).
+print_trigger(foul/5).
+
+% Output complex events
+print_trigger(shot/4).
+print_trigger(savedShot/9).
+print_trigger(filteringPass/5).
+print_trigger(pass/5).
+print_trigger(filteringPassThenGoal/5).
+print_trigger(passThenGoal/5).
+
+% SavedShot rules
+savedShot(Kf,BDf,KpId,KtId,BDltpId,BDtId,BDx,BDy,insideGoalArea) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where (BDf>Kf,BDf-Kf<500,KtId\=BDtId,getGK(BDtId,GKID),BDltpId=GKID,latLngToRegion(Kx,Ky,Kr),getInsideGoalArea(insideGoalArea),Kr=insideGoalArea).
+shot(Kf,BDf,KpId,KtId) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where (BDf>Kf,BDf-Kf<500,KtId\=BDtId,getGK(BDtId,GKID),BDltpId=GKID,latLngToRegion(Kx,Ky,Kr),getInsideGoalArea(insideGoalArea),Kr=insideGoalArea,call_gc).
+savedShot(Kf,BDf,KpId,KtId,BDltpId,BDtId,BDx,BDy,insidePenaltyArea) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where (BDf>Kf,BDf-Kf<500,KtId\=BDtId,getGK(BDtId,GKID),BDltpId=GKID,latLngToRegion(Kx,Ky,Kr),getInsidePenaltyArea(insidePenaltyArea),Kr=insidePenaltyArea).
+shot(Kf,BDf,KpId,KtId) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where (BDf>Kf,BDf-Kf<500,KtId\=BDtId,getGK(BDtId,GKID),BDltpId=GKID,latLngToRegion(Kx,Ky,Kr),getInsidePenaltyArea(insidePenaltyArea),Kr=insidePenaltyArea,call_gc).
+savedShot(Kf,BDf,KpId,KtId,BDltpId,BDtId,BDx,BDy,fromOutsideArea) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where (BDf>Kf,BDf-Kf<500,KtId\=BDtId,getGK(BDtId,GKID),BDltpId=GKID,latLngToRegion(Kx,Ky,Kr),getInsideGoalArea(insideGoalArea),getInsidePenaltyArea(insidePenaltyArea),Kr\=insidePenaltyArea,Kr\=insideGoalArea).
+shot(Kf,BDf,KpId,KtId) <- kickingTheBall(Kf,KpId,KtId,Kx,Ky) seq ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where (BDf>Kf,BDf-Kf<500,KtId\=BDtId,getGK(BDtId,GKID),BDltpId=GKID,latLngToRegion(Kx,Ky,Kr),getInsideGoalArea(insideGoalArea),getInsidePenaltyArea(insidePenaltyArea),Kr\=insidePenaltyArea,Kr\=insideGoalArea,call_gc).
+savedShot(Kf,BDf,KpId,KtId,BDltpId,BDtId,BDx,BDy,onFoul) <- foul(Ff,FvpId,FvtId,FfpId,FftId,FpId,Fpx,Fpy) seq ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where (BDf>Ff,getOnFoul(onFoul)).
+shot(Kf,BDf,KpId,KtId) <- foul(Ff,FvpId,FvtId,FfpId,FftId,FpId,Fpx,Fpy) seq ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where (BDf>Ff,getOnFoul(onFoul)).
+savedShot(Kf,BDf,KpId,KtId,BDltpId,BDtId,BDx,BDy,onPenalty) <- penalty(Pf,PvpId,PvtId,PfpId,PftId,PpId,Ppx,Ppy) seq ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where (BDf>Pf,getOnPenalty(onPenalty)).
+shot(Kf,BDf,KpId,KtId) <- penalty(Pf,PvpId,PvtId,PfpId,PftId,PpId,Ppx,Ppy) seq ballDeflection(BDf,BDltpId,BDtId,BDx,BDy) where (BDf>Pf,getOnPenalty(onPenalty)).

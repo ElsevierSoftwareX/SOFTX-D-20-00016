@@ -1,0 +1,7 @@
+KickingTheBall playerId teamId 10
+BallPossession playerId teamId 7
+Tackle playerId teamId 7
+BallOut 500
+Goal 500
+Foul 50
+Penalty 50
