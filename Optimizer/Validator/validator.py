@@ -52,22 +52,23 @@ class XML():
     @staticmethod
     def createDictionary(filename, samples = 1):
         """
-        Crea un dizionario di eventi a partire dal nome del file contenenti gli eventi. Il file degli eventi è un XML così organizzato:
+        Create an event dictionary. The event file organization:
+
         <annotations>
             <metadata>
                 ...
             </metadata>
-            <track id=1 label="NomeEvento1">
-                <box frame=-frame inizio evento- ...>
-                    <attribute name="nomeAttributo1"> -valore attributo 1- </attribute>
-                    <attribute name="nomeAttributo2"> -valore attributo 2- </attribute>
+            <track id=1 label="EventName1">
+                <box frame=-event start frame- ...>
+                    <attribute name="nameAttribute1"> -attribute value 1- </attribute>
+                    <attribute name="nameAttribute2"> -attribute value 2- </attribute>
                 </box>
             </track>
-            <track id=2 label="NomeEvento2">
+            <track id=2 label="EventName2">
             ...
             
-        :param filename: Stringa con il percorso al file XML
-        :return: Dizionario con tutti gli eventi nell'XML
+        :param filename: String with the path to the XML file
+        :return: Dictionary with all events in XML
         """
         dictionary = {}
         oldAttributes = None
@@ -139,37 +140,37 @@ class XML():
     @staticmethod
     def createOutputFile(dictionary, filename):
         """
-        Crea un file xml con gli eventi riconosciuti a partire da un dizionario. 
-        L'XML creato sarà così organizzato:
-        <results>
-            <overall>
-                <nomeEvento1>
-                    <total> -numero occorrenze totali dell'evento nel ground truth- </total>
-                    <TP> -numero occorrenze di veri positivi dell'evento - </TP>
-                    <FN> -numero occorrenze di falsi negativi dell'evento- </TN>
-                    <FP> -numero occorrenze di falsi positivi dell'evento- </FP>
-                </nomeEvento1>
-                <nomeEvento2>
-                ...
-            </overall>
-            <ground>
-                <frame number=1>
-                    <name> "nomeEvento" </name>
-                    <track> -numero della track- </track>
-                    <match> True/False </match>
-                <frame>
-                <frame number=2>
-                ...
-            </ground>
-            <detected>
-                come ground ma per gli eventi rilevati dal detector, ma aggiunge la percentuale/distanza
-                dall'evento del ground truth per quelli che sono rilevati
-            </detected>
-        </results>
-            
-        :param dictionary: Dizionario da convertire in XML
-        :param filename: Stringa con il percorso al file XML di output
-        :return: Dizionario con tutti gli eventi nell'XML
+        Create an xml file with events recognized from a dictionary.
+        The XML created will be organized as follows:
+        <Results>
+            <Overall>
+                <NomeEvento1>
+                    <total> -number of total occurrences of the event in the ground truth- </total>
+                    <TP> -number of occurrences of true positives of the event - </TP>
+                    <FN> -number of occurrences of false negatives of the event- </TN>
+                    <FP> -number of occurrences of false positives of the event- </FP>
+                </ NomeEvento1>
+                <NomeEvento2>
+                ...
+            </ Overall>
+            <Ground>
+                <frame number = 1>
+                    <name> "eventName" </name>
+                    <track> -track number- </track>
+                    <match> True / False </match>
+                <Frame>
+                <frame number = 2>
+                ...
+            </ Ground>
+            <Detected>
+                as ground but for the events detected by the detector, but adds the percentage / distance
+                from the ground truth event for those that are detected
+            </ Detected>
+        </ Results>
+            
+        : param dictionary: Dictionary to convert to XML
+        : param filename: String with the path to the output XML file
+        : return: Dictionary with all events in XML
         """
         #dicttoxml.set_debug()
         output = dicttoxml.dicttoxml(dictionary, custom_root='results', attr_type=False)
@@ -179,14 +180,14 @@ class XML():
 
 class BaseValidator():
     """
-    Classe base che compara gli eventi nel ground truth con quelli rilevati.
-    Verrà specializzata dalle classi figlie, una per gli eventi atomici e una per quelli complessi.
+    Base class that compares the events in the ground truth with those detected.
+    It will be specialized by the daughter classes, one for atomic events and one for complex ones.
     """
     def __init__(self, eventListFile, groundDictionary, detectedDictionary):
         """
-        :param eventListFile:  File con i parametri da confrontare per ciasciun evento
-        :param groundDictionary: Dizionario con gli eventi del ground truth
-        :param detectedDictionary: Dizionario con gli eventi rilevati
+        : param eventListFile: File with the parameters to compare for each event
+        : param groundDictionary: Dictionary with ground truth events
+        : param detectedDictionary: Dictionary with detected events
         """
         self.atomic = True
         self.groundDictionary = groundDictionary
@@ -203,9 +204,9 @@ class BaseValidator():
     
     def validate(self):
         """
-        Per ogni evento nel ground truth controlla se è nella vista degli eventi accettata.
-        A questo punto chiama la funzione che confronta gli eventi e seguirà logiche diverse
-        in base alla classe in cui verrà definita
+        For each event in the ground truth, check if it is in the accepted event view.
+        At this point it calls the function that compares the events and will follow different logics
+        based on the class in which it will be defined
         """
         for frame in self.groundDictionary:
             eventFoundName = None
@@ -243,12 +244,12 @@ class BaseValidator():
     
     def _populateKnowEventList(self, file):
         """
-        Popola la lista con gli eventi riconosciuti dal detector e gli attributi che dovrà confrontare
-        Questi saranno presenti in un file di testo in cui ciasciuna linea avrà la seguente struttura:
-        nomeEvento attributoEvento1 attributoEvento2 attributoEvento3 ...
-        
-        :param file: File con la lista eventi 
-        :return: Dizionario con tutti gli eventi da riconoscere, la chiave è il nome dell'evento
+        Populate the list with the events recognized by the detector and the attributes it will have to compare
+        These will be present in a text file in which each line will have the following structure:
+        nameEvent attributeEvent1 attributeEvent2 attributeEvent3 ...
+        
+        : param file: File with the event list
+        : return: Dictionary with all the events to be recognized, the key is the name of the event
         """
         newDictionary = {}
         if (PATH.isfile(file)):
@@ -264,11 +265,11 @@ class BaseValidator():
         
     def _populateOutputDictionary(self, dictionary):
         """
-        Crea un dizionario con gli eventi da confrontare, contenente solo nome, track e se è stato trovato o meno
-        Inizializzo tutto a False così poi mi limito a rendere True quelli corrispondenti
+        Create a dictionary with the events to compare, containing only name, track and if it has been found or not
+        I initialize everything to False so then I just make the corresponding ones true
 
-        :param dictionary: Dizionario di cui creare una formattazione di base
-        :return: Dizionario creato
+        : param dictionary: Dictionary to create basic formatting for
+        : return: Dictionary created
         """
         newDictionary = {}
         for key in dictionary:
@@ -284,17 +285,17 @@ class BaseValidator():
         return newDictionary
     
     def _compareEvent(self, isGround, frame, eventFoundName):
-        "Compara gli eventi in base all'algoritmo scelto fra atomici e complessi"
+        "Compare events based on the algorithm chosen between atomic and complex"
         pass
     
     def _compareFrame(self, isGround, originalFrame, comparedFrame, eventAttributes):
         """
-        Controlla che fra gli eventi ai frame del confronto vi sia una corrispondenza di tutti gli attributi
-        
-        :param originalFrame: Frame dell'evento da confrontare nel ground truth
-        :param comparedFrame: Frame dell'evento da confrontare tra quelli rilevati
-        :param eventAttributes: Lista di attributi da confrontare
-        :return: [booleano che indica se è stata trovata una corrispondenza, indice dell'evento corrispondente]
+        Check that all the attributes are matched between the events at the comparison frames
+        
+        : param originalFrame: Frame of the event to be compared in the ground truth
+        : param comparedFrame: Frame of the event to be compared among those detected
+        : param eventAttributes: List of attributes to compare
+        : return: [boolean indicating whether a match was found, index of the corresponding event]
         """
         equal = True
         if (isGround):
@@ -320,7 +321,7 @@ class BaseValidator():
         return [equal, comparedFrame]
     
     def _calculateOutputOverall(self):
-        "Calcola l'output sulla base degli eventi riconosciuti, calcolando i valori di precision e recall per ciascun evento"
+        "Calculate the output on the basis of the recognized events, calculating the precision and recall values ​​for each event"
         for frame in self.output['ground']:
             groundEvent = self.output['ground'][frame]
             if (groundEvent['match']):
@@ -345,13 +346,13 @@ class BaseValidator():
                     self.output['overall'][key]['recall'] = self.output['overall'][key]['TP'] / recallFraction
         
 class AtomicValidator(BaseValidator):
-    "Confronta gli eventi atomici"
+    "Compare atomic events"
     def __init__(self, eventListFile, groundDictionary, detectedDictionary, windowSize):
         """
-        :param eventListFile:  File con i parametri da confrontare per ciasciun evento
-        :param groundDictionary: Dizionario con gli eventi del ground truth
-        :param detectedDictionary: Dizionario con gli eventi rilevati
-        :param windowSize: Dimensione con la finestra di confronto
+        : param eventListFile: File with the parameters to compare for each event
+        : param groundDictionary: Dictionary with ground truth events
+        : param detectedDictionary: Dictionary with detected events
+        : param windowSize: Size with the comparison window
         """
         super().__init__(eventListFile, groundDictionary, detectedDictionary)
         self.atomic = True
@@ -359,7 +360,7 @@ class AtomicValidator(BaseValidator):
         self.output['overall']['windowSize'] = windowSize     
     
     def _compareEvent(self, isGround, frame, eventFoundName):
-        "Confronta gli eventi nella distanza inserita come parametro windowSize"
+        "Compare events in the distance entered as windowSize parameter"
         found, index = [False, -1]
         intFrame = int(frame)
         if (self.windowSize == -1):
@@ -386,13 +387,13 @@ class AtomicValidator(BaseValidator):
                 self.output[otherString][frame]['distance'] = abs(int(index) - int(frame))
 
 class AtomiMultiprocessValidator(AtomicValidator):
-    "Confronta gli eventi atomici con il multiprocessing"
+    "Compare atomic events with multiprocessing"
     def __init__(self, eventListFile, groundDictionary, detectedDictionary, windowSize):
         """
-        :param eventListFile:  File con i parametri da confrontare per ciasciun evento
-        :param groundDictionary: Dizionario con gli eventi del ground truth
-        :param detectedDictionary: Dizionario con gli eventi rilevati
-        :param windowSize: Dimensione con la finestra di confronto
+       : param eventListFile: File with the parameters to compare for each event
+        : param groundDictionary: Dictionary with ground truth events
+        : param detectedDictionary: Dictionary with detected events
+        : param windowSize: Size with the comparison window
         """
         self.groundDictionary = groundDictionary
         self.detectedDictionary = detectedDictionary
@@ -400,7 +401,7 @@ class AtomiMultiprocessValidator(AtomicValidator):
         self.eventListFile = eventListFile
         self.windowSize = windowSize
         #self._parseEvent() 
-        # lista di dizionari con tutti gli eventi, positivo/negativo
+        # list of dictionaries with all events, positive / negative
         self.output = []
     def validate(self, nProcess):
         splitValue = int(len(self.groundDictionary)/nProcess)
@@ -416,13 +417,13 @@ class AtomiMultiprocessValidator(AtomicValidator):
         [proc.join() for proc in processes]
 
 class ComplexValidator(BaseValidator):
-    "Confronta gli eventi complessi"
+    "Compare complex events"
     def __init__(self, eventListFile, groundDictionary, detectedDictionary, percentage):
         """
-        :param eventListFile:  File con i parametri da confrontare per ciasciun evento
-        :param groundDictionary: Dizionario con gli eventi del ground truth
-        :param detectedDictionary: Dizionario con gli eventi rilevati
-        :param percentage: Percentuale minima intersection / union affinché l'evento si dichiari rilevato
+        : param eventListFile: File with the parameters to compare for each event
+        : param groundDictionary: Dictionary with ground truth events
+        : param detectedDictionary: Dictionary with detected events
+        : param percentage: Minimum intersection / union percentage for the event to be declared detected
         """
         super().__init__(eventListFile, groundDictionary, detectedDictionary)
         self.atomic = False     
@@ -430,7 +431,7 @@ class ComplexValidator(BaseValidator):
         self.output['overall']['percentage'] = percentage
     
     def _compareEvent(self, isGround, frame, eventFoundName):
-        "Confronta gli eventi sulla base di intersection/union"
+        "Compare events based on intersection / union"
         found, index, percentage = [False, -1, 0]
         finalFrame = frame  
         if (isGround):
@@ -481,7 +482,7 @@ def main():
     startTime = time()
     atomic = True
 
-    # Ricordati di cancellare i parametri di default per ground truth e detected path
+    # Remember to clear the default parameters for ground truth and detected path
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--datasetPath", default='E:\GameplayFootball\Prova\Match_2019_02_15_#001_2nd_half', help="Path to the dataset")
     parser.add_argument("-e", "--eventFile", default='events.txt', help="Path to txt with a list of recognized event and attributes to compare")
