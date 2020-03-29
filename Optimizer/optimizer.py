@@ -160,7 +160,7 @@ def createValidatorFile(parameterList, outputPath):
     newParameterList = [int(par) for par in parameterList[:5]]
     fileString = 'KickingTheBall playerId teamId {1}\nBallPossession playerId teamId {2}\nTackle playerId teamId {3}\nBallDeflection playerId teamId {4}\nBallOut 500\nGoal team 100\nFoul 50\nPenalty 50'.format(*newParameterList)
     #fileString = 'KickingTheBall playerId teamId {1}\nBallPossession playerId teamId {2}\nTackle {3}\nBallDeflection playerId teamId {4}\nBallOut 500\nGoal 100\nFoul 50\nPenalty 50'.format(*newParameterList)
-    #spiega perché i valori standard per goal e ballout e forse gli altri
+
     with open(outputPath, 'w') as f:
             f.write(fileString)
     return fileString.split('\n')
@@ -446,13 +446,14 @@ def logStats(population, archive, index, logbook):
 
 
 def startOptimization(populationSize, archiveSize, nOfGenerations, crossoverProbability, mutationProbability, arguments, finalPath):
-    # lista parametri con range coperto e discretizzazione
+
+    #list of parameters with limit range and discretization
     attributeRange = [(0.0,119.0,'1.'),(3.0,30.0,'1.'),(3.0,30.0,'1.'),(3.0,30.0,'1.'),(3.0,30.0,'1.'),
                       (0.1,2.0,'.01'),(0.1,2.0,'.01'),(0.1,2.0,'.01'),(0.1,2.0,'.01'),
                       (0.1,1.0,'.01'),(0.1,1.0,'.01'),
                       (1.0,15.0,'.1'),(1.0,15.0,'.1'),(1.0,15.0,'.1'),(1.0,15.0,'.1'),
                       (5.0,30.0,'.1'),]
-    # varianza per ogni parametro su cui agisce la mutazione gaussiana
+    # variance for each parameter on which the Gaussian mutation acts
     sigma = [1, 1, 1, 1, 1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 1.0, 1.0, 1.0, 1.0, 1.0]
     
     creator.create("FitnessPrecRec", base.Fitness, weights=(0.8, 1.2))
