@@ -61,7 +61,7 @@ class Read(Thread):
     @dataclass_json
     @dataclass
     class PlayerData:
-        "Struttura dati contenente i dati posizionali e le feature del giocatore"
+        "Sdata structure containing positional data and player features "
 
         timestamp : float
         playerID : int

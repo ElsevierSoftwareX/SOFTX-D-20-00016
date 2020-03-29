@@ -37,17 +37,18 @@ class PlayerData:
     crossOnTargLine : float
 
 
-# Valore per individuare dall'ID che un giocatore appartiene ad una o all'altra squadra
-# playerID < PLAYERVALUE -> squadra in casa
-# playerID > PLAYERVALUE -> squadra fuori casa
-# playerID = PLAYERVALUE -> palla
+# Player ID is ID of player utils to attribute player to a team
+# playerID < PLAYERVALUE -> home team
+# playerID > PLAYERVALUE -> opposite team
+# playerID = PLAYERVALUE -> ball
 PLAYERVALUE = 128
 
 def teamPlayerData(playerValue):
     """
-    Funzione che, dato in ingresso l'ID di un giocatore, restituisce una lista così strutturata:
-    -il primo elemento vale 0 se il giocatore appartiene alla squadra in casa, 1 se appartiene alla squadra fuori casa
-    -il secondo elemento rappresenta l'ID del giocatore escludendo PLAYERVALUE
+
+    Function that receive ID of player and return a list
+    - first item is 0 if the player belongs to home team and 1 otherwise
+    - second item represents ID of player excluding PLAYERVALUE
     """
     if (playerValue < PLAYERVALUE):
         return [0, playerValue]
@@ -56,34 +57,35 @@ def teamPlayerData(playerValue):
     else:
         return [-1, -1]
 
-# Valore del numero massimo di dati posizionali e feature contenuti in 1 MB
+#Value of the maximum number of positional data and features contained in 1 MB
 MBVALUE = 2048
 
 # PARSER
 class GenericParser():
-    "Classe base da cui derivano i diversi parser"
+    "Base class from which the different parsers derive"
     def __init__(self):
         self.full = False
         self.position = 0
 
 class LineHalfParser(GenericParser):
     """
-    Classe che definisce i parser che leggono da file di testo formattati
-    come una serie di righe, ogni riga rappresenta i dati posizionali di un giocatore ad un dato frame.
-    Questo parser legge solamente un tempo della partita
+
+    Each row represents positional data of a player in a particular frame
+    This parser only reads one game time
     """
     def read(self, filename, data, size):
         """
-        Legge i dati presenti nel file e li estrae in una lista in memoria
 
-        :param filename: Stringa con il path per il file
-        :param data: Lista contenente il dataset
-        :param size: Massima occupazione in memoria dei dati in MB
+        Reads the data in the file and extracts them in a list in memory
+
+        :param filename: Path for file
+        :param data: List of dataset
+        :param size: Memory limit of data in MB
         """
-        # calcola il numero di righe totali che può leggere a questa iterazione di lettura, per non eccedere la memoria
+        # calculates the number of total lines it can read, so as not to exceed the memory
         totalMemory = MBVALUE * size
         
-        # salta le prime N righe con N = totalmemory, basandosi sull'ultima posizione letta
+        # based on last position skip N line
         with open(filename, 'r') as f:
             i = 0
             line = f.readline().rstrip('\n')
@@ -91,7 +93,6 @@ class LineHalfParser(GenericParser):
                 line = f.readline()
                 i = i + 1
 
-            # estrae i dati dal file di testo una riga alla volta e lo inserisce nella lista con il dataset
             while (not self.full and line != ""):
                 extractedData = self._extractFromLine(line)
                 newEntry = PlayerData(*extractedData, *[-1 for i in range(10)])
@@ -99,13 +100,9 @@ class LineHalfParser(GenericParser):
                 line = f.readline().rstrip('\n')
                 i = i + 1
 
-                # se hai letto il numero di righe massimo definito dall'occupazione della memoria segna l'ultima posizione a cui è arrivato
                 if (i - self.position) >= totalMemory:
                     self.full = True
 
-                    # esamina la lista dall'ultimo elemento a ritroso fino a quando non si trova la palla al frame corrente
-                    # in questo modo non si ha l'ultimo frame della lista frammentato con solo una parte dei dati
-                    # elimino l'elemento della lista e considero come ultimo elemento l'ultimo prima della palla all'ultimo frame
                     for k in range(len(actualTime)-1,0,-1):
                         element = actualTime.pop(k)
                         i -= 1
@@ -113,34 +110,29 @@ class LineHalfParser(GenericParser):
                            break 
                     self.position = i
     def _extractFromLine(self, line):
-        "Ritorna tutti gli elementi letti sulla riga del file di testo"
+
         elements = line.split(" ")
         return [float(element) for element in elements]
 
 class LineParser(GenericParser):
-    """
-    Simile a lineHalfparser ma si segna anche i frame di inizio del secondo tempo per generare i due tempi di una partita
-    """
+
     def read(self, filename, size, halfTimeFrame):
         """
-        Legge i dati presenti nel file e li estrae in una lista in memoria.
-        Questa lista è a sua volta composta da due liste, la prima per i dati
-        del primo tempo e la seconda per il secondo tempo
+        List composed by two times of match
 
-        :param filename: Stringa con il path per il file
-        :param size: Massima occupazione in memoria dei dati in MB
-        :param halfTimeFrame: Frame da cui inizia il secondo tempo
+        :param filename: Path for file
+        :param data: List of dataset
+        :param size: Memory limit of data in MB
 
-        :return due liste, una per il primo tempo e una per il secondo
+
+
         """
-        # calcola il numero di righe totali che può leggere a questa iterazione di lettura, per non eccedere la memoria
         totalMemory = MBVALUE * size
         firstTime = []
         secondTime = []
         actualTime = firstTime
         data = [firstTime, secondTime]
 
-        # salta le prime N righe con N = totalmemory, basandosi sull'ultima posizione letta
         with open(filename, 'r') as f:
             i = 0
             line = f.readline().rstrip('\n')
@@ -148,7 +140,6 @@ class LineParser(GenericParser):
                 line = f.readline()
                 i = i + 1
 
-            # estrae i dati dal file di testo una riga alla volta e lo inserisce nella lista con il dataset
             while (not self.full and line != ""):
                 extractedData = self._extractFromLine(line)
                 newEntry = PlayerData(*extractedData, *[-1 for i in range(14 - len(extractedData))])
@@ -159,14 +150,10 @@ class LineParser(GenericParser):
                 line = f.readline().rstrip('\n')
                 i = i + 1
                 
-                # se hai letto il numero di righe massimo definito dall'occupazione della memoria segna l'ultima posizione a cui è arrivato
                 if (i - self.position) >= totalMemory:
                     self.full = True
 
-                    # esamina la lista dall'ultimo elemento a ritroso fino a quando non si trova la palla al frame corrente
-                    # in questo modo non si ha l'ultimo frame della lista frammentato con solo una parte dei dati
-                    # elimino l'elemento della lista e considero come ultimo elemento l'ultimo prima della palla all'ultimo frame
-                    for k in range(len(actualTime)-1,0,-1):
+                   for k in range(len(actualTime)-1,0,-1):
                         element = actualTime.pop(k)
                         i -= 1
                         if(element.playerID == PLAYERVALUE):
@@ -174,58 +161,40 @@ class LineParser(GenericParser):
                     self.position = i
         return data
     def _extractFromLine(self, line):
-        "Ritorna tutti gli elementi letti sulla riga del file di testo"
         elements = line.split(" ")
         return [float(element) for element in elements]
 
 class LinePandaParser(GenericParser):
     """
-    Come LineParser, ma utilizza Pandas per essere ottimizzare al massimo il processo
+    Pandas Library used for the optimization process
     """
     def read(self, filename, size, halfTimeFrame, isFeature = False):
-        """
-        Legge i dati presenti nel file e li estrae in una lista in memoria.
-        Questa lista è a sua volta composta da due liste, la prima per i dati
-        del primo tempo e la seconda per il secondo tempo
 
-        :param filename: Stringa con il path per il file
-        :param size: Massima occupazione in memoria dei dati in MB
-        :param halfTimeFrame: Frame da cui inizia il secondo tempo
-        :param isFeature: Booleano che indica se si stanno estraendo feature o dati posizionali
-
-        :return due liste, una per il primo tempo e una per il secondo
-        """
-        # calcola il numero di righe totali che può leggere a questa iterazione di lettura, per non eccedere la memoria
         totalMemory = MBVALUE * size
         firstTime = []
         secondTime = []
         actualTime = firstTime
         data = [firstTime, secondTime]
 
-        # indica i dati da leggere dal file, se si vogliono estrarre solo i dati posizionali o solo le feature
         if (isFeature):
             names = ['timestamp', 'playerID','xPosition','yPosition', 'direction', 'velocity', 'acceleration', 
                      'accPeak', 'accPeakReal','dirChange','distToBall','distToTarget', 'distToGoal', 'crossOnTargLine']
         else:
             names = ['timestamp', 'playerID','xPosition','yPosition']
         
-        # estrae una matrice con tutti i dati utilizzando pandas
+
         parsedData = pandas.read_csv(filename, sep=' ', engine='c', skiprows=int(self.position), nrows=totalMemory, memory_map=True, names=names)
         
-        # aggiunge i dati per ogni riga della matrice alla lista di PlayerData 
+
         for row in parsedData.itertuples(name=None):
             newEntry = PlayerData(*row[1:], *[-1 for i in range(14 - len(row)+1)])
             if (int(newEntry.timestamp) == halfTimeFrame):
                 actualTime = secondTime
             actualTime.append(newEntry)
-        # se hai letto il numero di righe massimo definito dall'occupazione della memoria segna l'ultima posizione a cui è arrivato
         if (len(parsedData) >= totalMemory):
             self.full = True
         self.position += len(parsedData)
         if (self.full):
-            # esamina la lista dall'ultimo elemento a ritroso fino a quando non si trova la palla al frame corrente
-            # in questo modo non si ha l'ultimo frame della lista frammentato con solo una parte dei dati
-            # elimino l'elemento della lista e considero come ultimo elemento l'ultimo prima della palla all'ultimo frame
             for k in range(len(actualTime)-1,0,-1):
                 element = actualTime.pop(k)
                 self.position -= 1
@@ -238,15 +207,15 @@ class LinePandaParser(GenericParser):
 
 # FEATURE EXTRACTION
 class FeatureExtractor():
-    """Classe con il compito di estrarre le feature a partire dai dati posizionali
-       COSE DA SCRIVERE: LA PALLA LA CONSIDERO SEMPRE PRIMA
+    """
+       Feature extraction from positional data
     """
     def __init__(self, sampling, xDimension, yDimension,isFirstHalf):
         """
-        :param sampling: sampling rate del dataset
-        :param xDimension: dimensione orizzontale del campo
-        :param yDimension: dimensione verticale del campo
-        :param isFirstHalf: determina se è il primo tempo della partita o meno
+        :param sampling: sampling rate
+        :param xDimension of field
+        :param yDimension of field
+        :param isFirstHalf: first or second time
         """
         self.sampligRate = sampling
         self.xDimension = xDimension
@@ -256,13 +225,7 @@ class FeatureExtractor():
         self.currentTimestamp = -1
         self.ballIndex = -1
     def extract(self, data):
-        """
-        Estrae le varie feature dalla lista di dati posizionali
-        Per motivi implementativi ho deciso che nello scorrere vengono estratte le feature per l'elemento precedente,
-        questo ha reso necessario la funzione "firstElementAccPeak" in quanto si tratta di feature che fanno riferimento
-        sia all'elmeneto precedente che quello successivo
-        E' necessario ripetere il ciclo di estrazione più volte in quanto ogni volta è necessario che sia stata estratta una feature precedente 
-        """
+
         for i,element in enumerate(data):
             if i >= 23:
                 self._extractDirection(data, i)
@@ -291,8 +254,7 @@ class FeatureExtractor():
         self.ballIndex = -1
     def compact(self, data):
         """
-        Crea una nuova versione compatta dei dati che si possono scorrere più facilmente a seconda del timestamp,
-        sarà utile all'event detector e per creare il json di riferimento
+        Create compact version of datas
         """
         newData = []
         homeTeam = []
@@ -300,7 +262,7 @@ class FeatureExtractor():
         ballIndex = -1
         currentTimestamp = data[0].timestamp
         for i,element in enumerate(data):
-            # separa gli elementi per timestamp, in modo da avere un elemento della lista rappresentante l'intero frame
+
             if element.timestamp != currentTimestamp :
                 homeTeam.sort(key = attrgetter('playerID'))
                 awayTeam.sort(key = attrgetter('playerID'))
@@ -327,12 +289,11 @@ class FeatureExtractor():
         return newData
     def _goalExtractor(self):
         """
-        Estrae la posizione della porta, da modificare nel caso si decidano sistemi di riferimento diversi ()
-        SISTEMA DI RIFERIMENTO DESCRITTO NEL FILE
+        Extract location of the football goal
         """
         return [0, self.xDimension, self.yDimension/2]
     def _currentPlayerGoal(self, playerID):
-        "Ritorna una lista con, in ordine, la propria porta e la porta avversaria, in base al tempo della partita"
+
         if((playerID < PLAYERVALUE and self.isFirstHalf) or (playerID > PLAYERVALUE and (not self.isFirstHalf))):
             return [self.xGoal1Position, self.xGoal2Position]
         elif ((playerID < PLAYERVALUE and (not self.isFirstHalf)) or (playerID > PLAYERVALUE and  self.isFirstHalf)):
@@ -340,7 +301,7 @@ class FeatureExtractor():
         else:
             return [-1,-1]
     def _findBall(self, data, index):
-        "Ritorna l'indice della palla nel timestamp corrente"
+
         currentTimestamp = data[index - 1].timestamp
         i = 0
         upperFound, lowerFound = [False, False]
@@ -356,33 +317,31 @@ class FeatureExtractor():
             if (data[i].playerID == PLAYERVALUE):
                 return i
     def _firstElementAccPeak(self,data, index):
-        "Assegna il picco di accelerazione ai primi 23 elementi, che non vengono considerati dal ciclo for dell'estrattore"
-        data[index].accPeak = data[index].acceleration
+        #Assigns the acceleration peak to the first 23 elements, which are not considered by the extractor cycledata[index].accPeak = data[index].acceleration
         if (math.fabs(data[index].accPeak) > math.fabs(data[index + 23].accPeak)):
             data[index].accPeakReal = data[index].accPeak
         else:
             data[index].accPeakReal = 0
 
     def _extractDirection(self, data, index):
-        "Estrae la direzione in cui è si muove l'oggetto (DIFFERENZA CON DESCRIZIONE ORIGINALE)"
+
         data[index - 23].direction = math.atan2(data[index].yPosition - data[index - 23].yPosition ,
                                       data[index].xPosition - data[index - 23].xPosition)
     def _extractVelocity(self, data, index):
-        "Estrae la velocita a cui si muove l'oggetto"
+
         data[index - 23].velocity = self.sampligRate * math.hypot((data[index].yPosition - data[index - 23].yPosition),
                                                                  (data[index].xPosition - data[index - 23].xPosition))
     def _extractAcceleration(self, data, index):
-        "Estrae l'accelerazione subita dall'oggetto rispetto all'ultimo frame"
+
         data[index - 23].acceleration = data[index].velocity - data[index-23].velocity
     def _extractAccPeak(self, data, index):
-        "Estrae il picco di accelerazione subito dall'oggetto, serve per trovare la presenza di un picco di accelerazione reale"
         if (data[index - 23].acceleration >= 0):
             data[index].accPeak = data[index - 23].acceleration + max(0,data[index].acceleration)
         else:
             data[index].accPeak = data[index - 23].acceleration + min(0, data[index].acceleration)
     def _extractAccPeakReal(self, data, index):
         """
-        Estrae il picco di accelerazione reale, il metodo segue quello descritto nel paper con aggregazione di due frame consecutivi
+        It extracts the peak of real acceleration, the method follows that described in the paper with the aggregation of two consecutive frames
         """
         if index >= (len(data) - 23):
             nextElementPeak = data[index - 23].accPeak
@@ -395,12 +354,12 @@ class FeatureExtractor():
         else:
             data[index].accPeakReal = 0
     def _extractDirChange(self, data, index):
-        "Estrae il cambio di direzione rispetto a quella precedente"
+        "Extract the change of direction from the previous one"
         data[index - 23].dirChange = math.fabs(data[index].direction - data[index - 23].direction)
     def _extractDistToBall(self, data, index):
         """
-        Estrae la distanza del giocatore corrente dalla palla,
-        motivo per cui cerca di capire quale sia l'indice della palla per il timestamp corrente
+        Extracts the distance of the current player from the ball,
+        which is why he tries to figure out what the ball index is for the current timestamp
         """
         if (self.ballIndex == -1):
             self.ballIndex = self._findBall(data, index)
@@ -419,7 +378,7 @@ class FeatureExtractor():
         if (data[index - 1].timestamp != data[index].timestamp):
             self.ballIndex = -1
     def _extractDistToTarget(self, data, index):
-        "Estrae la distanza del giocatore dalla porta avversaria"
+        "Extracts the player's distance from the opponent's goal"
         thisGoalxPosition = self._currentPlayerGoal(data[index-1].playerID)[1]
         if thisGoalxPosition != -1:
             data[index - 1].distToTarget = math.hypot((self.yGoalPosition - data[index - 1].yPosition),
@@ -427,7 +386,7 @@ class FeatureExtractor():
         else:
             data[index - 1].distToTarget = -1
     def _extractDistToGoal(self, data, index):
-        "Estrae la distanza del giocatore dalla propria porta"
+        "Extracts the player's distance from his goal"
         thisGoalxPosition = self._currentPlayerGoal(data[index-1].playerID)[0]
         if thisGoalxPosition != -1:
             data[index - 1].distToGoal = math.hypot((self.yGoalPosition - data[index - 1].yPosition),
@@ -435,7 +394,7 @@ class FeatureExtractor():
         else:
             data[index - 1].distToGoal = -1
     def _extractCrossOnTargLine(self, data, index):
-        "Estrae il momento in cui l'oggetto intersecherà la linea di fondo campo proseguendo nella stessa direzione"
+        "Extracts the moment when the object will intersect the goal line going in the same direction"
         thisGoalxPosition = self._currentPlayerGoal(data[index - 23].playerID)[1]
         if thisGoalxPosition != -1:
             data[index - 23].crossOnTargLine = math.fabs(data[index - 23].yPosition - self.yGoalPosition +
@@ -448,7 +407,7 @@ class FeatureExtractor():
 class GenericEvent:
     def recognize(self, data, index):
         """
-        Da ridefinire nelle classi figlie, riconosce l'evento
+
 
         :param data:
         :param index:
@@ -456,17 +415,17 @@ class GenericEvent:
         """
         pass
     def _setEvent(self, data, index, player):
-        "Da ridefinire nelle classi figlie, crea un dizionario che descrive l'evento riconosciuto"
+        "To be redefined in the daughter classes, create a dictionary that describes the recognized event"
         return None
     def _readFromFile(self, file):
-        "Se viene passata una lista di stringe la utilizza per leggere le soglie, se no apre il file"
+        "To be redefined in the daughter classes, create a dictionary that describes the recognized event"
         if (PATH.isfile(file)):
             with open(file, 'r') as f:
                 self._readFromLines(f)
         elif (type(file) is list):
             self._readFromLines(file)
     def _readFromLines(self, lines):
-        "Per ogni linea nella lista controlla la versione dell'evento, se corrisponde utilizza quella linea per inizializzare l'evento"
+        # For each line in the list check the version of the event, if it matches use that line to initialize the event
         for line in lines:
             elements = line.rstrip('\n').split(" ")
             if elements[0] == self.name :
@@ -480,28 +439,27 @@ class GenericEvent:
         print("Non è stata trovata una riga di testo per inizializzare correttamente il modulo")
         raise Exception("Evento non nel file")
     def _initialize(self, list):
-        "Da ridefinire nelle classi figlie, inizializza le soglie"
+
         pass
 
 
 class PlayerEvent(GenericEvent):
-    "Classe base per tutti gli eventi di cui fa parte almeno un giocatore"
+    "Base class for all events that include at least one player"
     def recognize(self, data, index):
         """
-        Funzione base che riconosce gli eventi controllando la precondizione e poi iterando la condizione specifica
-        dell'evento per ogni istante della finestra temporale
+        Basic function that recognizes events by checking the precondition and then iterating the specific condition
+        of the event for each moment of the time window
 
-        :param data: Dataset compatto con dati posizionali e feature
-        :param index: Indice da cui inizia la finestra
-        :return: Un dizionario con l'evento riconosciuto, None in caso non sia stato riconosciuto nulla
+        :param data: Compact dataset with positional data and features
+        :param index: Index from which the window starts
+        :return: A dictionary with the recognized event, None in case nothing has been recognized
         """
-        # Controlla se la precondizione è verificata
+
         result, selectedPlayer = self._checkPrecondition(data, index)
         if not result:
             return [None, index]
 
         self.middlePlayer = None
-        # Loop che itera per tutta la durata della finestra temporale e controlla che la condizione sia verificata
         for i in range(1, int(self.windowSize)):
             if (i == math.floor(self.windowSize/2)):
                 isMiddle = True
@@ -512,28 +470,27 @@ class PlayerEvent(GenericEvent):
             elif not self._checkCondition(data, index + i, selectedPlayer, isMiddle) :
                 return [None, index]
         
-        # Controlla se la postcondizione è verificata
         if not(self._checkPostcondition(data, index + int(self.windowSize)-1, selectedPlayer)):
             return [None, index]
-        # Se non è ritornata mentre scorreva la finestra si suppone che l'evento sia stato trovato e si cambia l'index della ricerca
         output = self._setEvent(data,index, self.middlePlayer)
         if output != None :
             index += math.floor(self.windowSize/self.stride)
         return [output, int(index)]
     def _checkCondition(self, data, index, selectedPlayer, isMiddle):
-        "Funzione da sovrascrivere nelle classi figlie, verifica le condizioni specifiche per ogni evento"
+
         pass
 
     def _checkPrecondition(self, data, index):
         """
-        Funzione funzione per verificare la precondizione, controlla che la distanza del giocatore più vicino alla palla
-        sia inferiore alla soglia predefinita
+       Function function to check the precondition, check that the distance of the player closest to the ball
+        is below the default threshold
 
-        :param data: Dataset compatto con dati posizionali e feature
-        :param index: Indice da cui inizia la finestra
-        :return: Una lista avente come primo elemento un booleano che descrive se la condizione è verificata e come secondo elemento il giocatore che la verifica
+        :param data: Compact dataset with positional data and features
+        :param index: Index of window
+        :return: UA list with the condition is verified and the player who verifies it
+        List with condition verified and player
         """
-        # Trovo il giocatore con la minima distanza dalla palla
+        # I find the player with the least distance from the ball
         minimum = 1000
         playerIndex = -1
         for i,player in enumerate(chain(data[index].get('homeTeam'), data[index].get('awayTeam'))):
@@ -541,7 +498,7 @@ class PlayerEvent(GenericEvent):
                 minimum = player.distToBall
                 playerIndex = i
 
-        # Se la distanza è inferiore alla soglia inserisco ritorno il giocatore trovato
+
         if minimum > self.threshold1:
             return [False, -1]
         else:
@@ -552,15 +509,13 @@ class PlayerEvent(GenericEvent):
                 teamString = 'awayTeam'
             return [True, data[index].get(teamString)[playerIndex]]
     def _checkPostcondition(self, data, index, selectedPlayer):
-        "Postcondizione, di base non ce ne sono per cui restiuisce sempre true"
+
         return True
 
 class KickEvent(PlayerEvent):
-    "Classe che definisce l'event detector per il calcio alla palla"
+
     def __init__(self, file):
-        """
-        :param file: File contenente una lista di parametri di inizializzazione per il modulo
-        """
+
         self.name = "KickingTheBall"
         self.version = "3.0"
         self.accelerationCheck = False
@@ -570,7 +525,7 @@ class KickEvent(PlayerEvent):
         self.middlePlayer = None
         self.stride = 1
     def _checkPrecondition(self, data, index):
-        "Controlla che negli windowSize/2 frame precedenti ci sia stata un'accelerazione superiore alla soglia"
+        "Check for acceleration above threshold in previous windowSize / 2 frames"
         for i in range(math.floor(self.windowSize/2)):
             if not(self.accelerationCheck) and ((index - i) >= 0) :
                 if (data[index-i].get('ball').acceleration > self.threshold2):
@@ -578,13 +533,13 @@ class KickEvent(PlayerEvent):
         return super()._checkPrecondition(data, index)
     def _checkCondition(self, data, index, selectedPlayer, isMiddle):
         """
-        Verifica che la palla si stia allontanando dal giocatore
+       Check that the ball is moving away from the player
 
-        :param data: Dataset compatto con dati posizionali e feature
-        :param index: Indice su cui verificare la condizione
-        :param selectedPlayer: Giocatore su cui verificare la condizione
-        :param isMiddle: Booleano che indica se è il frame intermedio o no
-        :return: Un booleano che indica se la condizione è verificata o meno
+        : param data: Compact dataset with positional data and features
+        : param index: Index on which to check the condition
+        : param selectedPlayer: Player to check the condition on
+        : param isMiddle: Boolean indicating whether it is the intermediate frame or not
+        : return: A Boolean indicating whether the condition has occurred or not
         """
         condition = False
         for player in chain(data[index].get('homeTeam'), data[index].get('awayTeam')):
@@ -594,13 +549,13 @@ class KickEvent(PlayerEvent):
                 if not (self.accelerationCheck):
                     if (data[index].get('ball').acceleration > self.threshold2):
                         self.accelerationCheck = True
-                # controlla che la palla si stia allontanando dal giocatore
+
                 if (player.distToBall > selectedPlayer.distToBall):
                     condition = True
                     break
         return condition
     def _checkPostcondition(self, data, index, selectedPlayer):
-        "Aggiunta ora, cancellare per tornare alla vecchia versione. Controlla che alla fine la palla si trovi al di fuori della soglia con una velocità elevata"
+      "Check that the ball is eventually outside the threshold with a high speed"
         condition = False
         for player in chain(data[index].get('homeTeam'), data[index].get('awayTeam')):
             if (player.distToBall > self.threshold1) and (player.playerID == selectedPlayer.playerID):
@@ -616,14 +571,14 @@ class KickEvent(PlayerEvent):
                 'x' : round(player.xPosition,1),
                 'y' : round(player.yPosition,1)}]
     def _initialize(self, list):
-        #distanza, velocità alla fine, picco di accelerazione
+        # distance, speed at the end, acceleration peak
         self.windowSize, self.threshold1, self.threshold2 = list
 
 class PossessionEvent(PlayerEvent):
-    "Classe che definisce l'event detector per il possesso palla"
+    "Ball Possession event"
     def __init__(self, file, halfTimeFrame, goalkeeper0, goalkeeper1):
         """
-        :param file: File contenente una lista di parametri di inizializzazione per il modulo
+        :param file: File containing a list of initialization parameters for the module
         """
         self.name = "BallPossession"
         self.version = "3.0"
@@ -644,15 +599,15 @@ class PossessionEvent(PlayerEvent):
         return condition
     def _checkCondition(self, data, index, selectedPlayer, isMiddle):
         """
-        Verifica che la palla rimanga vicina al giocatore e sia l'unico giocatore nella soglia più grande
+        Verify that the ball remains close to the player and is the only player in the largest threshold
 
-        :param data: Dataset compatto con dati posizionali e feature
-        :param index: Indice su cui verificare la condizione
-        :param selectedPlayer: Giocatore su cui verificare la condizione
-        :return: Un booleano che indica se la condizione è verificata o meno
+        : param data: Compact dataset with positional data and features
+        : param index: Index on which to check the condition
+        : param selectedPlayer: Player to check the condition on
+        : return: A Boolean indicating whether the condition has occurred or not
         """
 
-        # Trova il giocatore più vicino alla palla
+
         minimum = 1000
         condition = True
         minPlayer = None
@@ -665,23 +620,23 @@ class PossessionEvent(PlayerEvent):
         if minPlayer == None :
             return False
 
-        # Verifica che sia ancora il giocatore che dovrebbe avere il controllo palla
+        # Verify that it is still the player who should be in control of the ball
         if selectedPlayer.playerID == minPlayer.playerID:
             if (isMiddle):
                 self.middlePlayer = minPlayer
 
-            # Seleziona la squadra avversaria
+
             teamString = 'homeTeam'
             if (selectedPlayer.playerID < PLAYERVALUE):
                 teamString = 'awayTeam'
 
-            # individua il lato in cui gioca la squadra avversaria
+            # identify the side on which the opposing team plays
             if ((teamString == 'awayTeam') and (selectedPlayer.timestamp < self.halfTimeFrame)) or ((teamString == 'homeTeam') and (selectedPlayer.timestamp >= self.halfTimeFrame)):
                 side = 'right'
             else:
                 side = 'left'
 
-            # Verifica che non ci siano giocatori avversari intorno al giocatore e segna il giocatore avversario più vicino alla propria porta
+            # Verify that there are no opposing players around the player and mark the opposing player closest to his goal
             minimum = 1000
             maximum = -1000
             for player in data[index].get(teamString):
@@ -700,16 +655,16 @@ class PossessionEvent(PlayerEvent):
                             maximum = player.xPosition
                             if (isMiddle):
                                 self.lastPlayer = player
-            
-            # Controllo che la palla non sia in rimessa laterale (bordo inferiore)
-            # a) la velocità della palla inferiore a 0.1
-            # b) la posizione in prossimità della linea di bordo campo
+
+            # Check that the ball is not in the lineout (bottom edge)
+            # a) the ball speed lower than 0.1
+            # b) the position near the edge line
             if data[index].get('ball').velocity < 0.1 and data[index].get('ball').yPosition > -0.5 and data[index].get('ball').yPosition < 0.5:
                 return False
 
-            # Controllo che la palla non sia in rimessa laterale (bordo superiore)
-            # a) la velocità della palla inferiore a 0.1
-            # b) la posizione in prossimità della linea di bordo campo
+            # Check that the ball is not in the throw-in (top edge)
+            # a) the ball speed lower than 0.1
+            # b) the position near the edge line
             if data[index].get('ball').velocity < 0.1 and data[index].get('ball').yPosition > 71.5 and data[index].get('ball').yPosition < 72.5:
                 return False
 
@@ -717,7 +672,6 @@ class PossessionEvent(PlayerEvent):
             condition = False
         return condition
     def _checkPostcondition(self, data, index, selectedPlayer):
-        "Aggiunta ora, cancellare per tornare alla vecchia versione. Controlla che alla fine la abboa velocità inferiore alla soglia"
         condition = True
         if (data[index].get('ball').velocity > self.threshold3):
             condition = False
@@ -734,14 +688,14 @@ class PossessionEvent(PlayerEvent):
                 'outermostOtherTeamDefensivePlayerX' : round(self.lastPlayer.xPosition,1),
                 'outermostOtherTeamDefensivePlayerY' : round(self.lastPlayer.yPosition,1)}]
     def _initialize(self, list):
-        # distanza minima, massima e velocità
+        #minimum, maximum distance and speed
         self.windowSize, self.threshold1,self.threshold2, self.threshold3 = list
 
 class TackleEvent(PlayerEvent):
-    "Classe che definisce l'event detector per il contrasto"
+    "Class that defines the event detector for contrast"
     def __init__(self, file):
         """
-        :param file: File contenente una lista di parametri di inizializzazione per il modulo
+       : param file: File containing a list of initialization parameters for the module
         """
         self.name = "Tackle"
         self.version = "3.0"
@@ -759,15 +713,15 @@ class TackleEvent(PlayerEvent):
         return condition
     def _checkCondition(self, data, index, selectedPlayer, isMiddle):
         """
-        Verifica che la palla rimanga vicina al giocatore e non sia l'unico giocatore nella soglia più grande
+        Verify that the ball remains close to the player and is not the only player in the largest threshold
 
-        :param data: Dataset compatto con dati posizionali e feature
-        :param index: Indice su cui verificare la condizione
-        :param selectedPlayer: Giocatore su cui verificare la condizione
-        :return: Un booleano che indica se la condizione è verificata o meno
+        : param data: Compact dataset with positional data and features
+        : param index: Index on which to check the condition
+        : param selectedPlayer: Player to check the condition on
+        : return: A Boolean indicating whether the condition has occurred or not
         """
 
-        # Trova il giocatore più vicino alla palla
+
         minimum = 1000
         condition = False
         minPlayer = None
@@ -777,16 +731,16 @@ class TackleEvent(PlayerEvent):
                 minimum = player.distToBall
                 minPlayer = player
 
-        # Verifica che sia ancora il giocatore che dovrebbe avere il controllo palla
+        # Verify that it is still the player who should be in control of the ball
         if selectedPlayer.playerID == minPlayer.playerID:
             if (isMiddle):
                 self.middlePlayer = minPlayer
-            #seleziona la squadra avversaria
+            #select the opposing team
             teamString = 'homeTeam'
             if selectedPlayer.playerID < PLAYERVALUE:
                 teamString = 'awayTeam'
 
-            # Verifica che non ci siano giocatori avversari intorno al giocatore e salva il giocatore che effettua il contrasto
+            # Check that there are no opposing players around the player and save the player who makes the contrast
             for player in data[index].get(teamString):
                 distance = math.hypot(player.yPosition - minPlayer.yPosition,
                                       player.xPosition - minPlayer.xPosition)
@@ -796,7 +750,6 @@ class TackleEvent(PlayerEvent):
                     break
         return condition
     def _checkPostcondition(self, data, index, selectedPlayer):
-        "Aggiunta ora, cancellare per tornare alla vecchia versione. Controlla che alla fine la abboa velocità inferiore alla soglia"
         condition = True
         if (data[index].get('ball').velocity > self.threshold3):
             condition = False
@@ -838,10 +791,10 @@ class TackleEvent(PlayerEvent):
         self.windowSize, self.threshold1, self.threshold2, self.threshold3 = list
 
 class BallDeflectionEvent(PlayerEvent):
-    "Classe che definisce l'event detector per la deflessione palla"
+    " Class that defines the event detector for ball deflection "
     def __init__(self, file, goalkeeper0, goalkeeper1):
         """
-        :param file: File contenente una lista di parametri di inizializzazione per il modulo
+      : param file: File containing a list of initialization parameters for the module
         """
         self.name = "BallDeflection"
         self.version = "3.0"
@@ -854,7 +807,7 @@ class BallDeflectionEvent(PlayerEvent):
         self.GOALKEEPER0 = goalkeeper0
         self.GOALKEEPER1 = goalkeeper1
     def _checkPrecondition(self, data, index):
-        "Controlla che negli windowSize/2 frame precedenti ci sia stata un'accelerazione superiore alla soglia"
+        "Check for acceleration above threshold in previous windowSize / 2 frames"
         "e che la palla sia vicina i piedi di un giocatore diverso dal portiere"
         
         # minimum = 1000
@@ -881,46 +834,45 @@ class BallDeflectionEvent(PlayerEvent):
 
     def _checkCondition(self, data, index, selectedPlayer, isMiddle):
         """
-        Verifica che ci sia stato un contatto tra il portiere e la palla
+        Check that there has been contact between the goalkeeper and the ball
 
-        :param data: Dataset compatto con dati posizionali e feature
-        :param index: Indice su cui verificare la condizione
-        :param selectedPlayer: Giocatore su cui verificare la condizione
-        :return: Un booleano che indica se la condizione è verificata o meno
+        : param data: Compact dataset with positional data and features
+        : param index: Index on which to check the condition
+        : param selectedPlayer: Player to check the condition on
+        : return: A Boolean indicating whether the condition has occurred or not
         """
         condition = False
 
         if not self.accelerationCheck:
             return condition
 
-        # Per ogni giocatore
+        # For each player
         for player in chain(data[index].get('homeTeam'), data[index].get('awayTeam')):
 
-            # Controllo che il giocatore a fare la deviazione sia un portiere
+            # Check that the player making the detour is a goalkeeper
             if selectedPlayer.playerID != self.GOALKEEPER0 and selectedPlayer.playerID != self.GOALKEEPER1:
                 return False
 
-            # Controllo che la palla sia veloce
-            # if data[index].get('ball').velocity < self.threshold2:
-            #    return False
+            # Check that the ball is fast
+            # if data [index] .get ('ball'). velocity <self.threshold2:
+             # return False
 
             # Storicizzo il portiere, per l'emissione finale
             if (isMiddle):
                 self.middlePlayer = selectedPlayer
 
-            # # Se giocatore diverso dal portiere
-            # if (player.playerID != selectedPlayer.playerID):
+            # # If player other than goalkeeper
+            # if (player.playerID! = selectedPlayer.playerID):
 
-            #     # Controllo che la sua distanza dalla palla sia maggiore rispetto a quella del portiere
-            #     if (player.distToBall < selectedPlayer.distToBall):
-            #         return False
+             # # I check that his distance from the ball is greater than that of the goalkeeper
+            # if (player.distToBall <selectedPlayer.distToBall):
+             # return False
        
         condition = True
         # print("BallkeeperDeflection - Condition passed at frame:" + str(index))
         return condition
 
     def _checkPostcondition(self, data, index, selectedPlayer):
-        "Aggiunta ora, cancellare per tornare alla vecchia versione. Controlla che alla fine la palla si trovi al di fuori della soglia"
         condition = True
         #  for player in chain(data[index].get('homeTeam'), data[index].get('awayTeam')):
         #     if (player.distToBall > self.threshold1) and (player.playerID == selectedPlayer.playerID):
@@ -940,7 +892,7 @@ class BallDeflectionEvent(PlayerEvent):
         self.windowSize, self.threshold1, self.threshold2, self.threshold3, self.threshold4 = list
 
 class BallOutEvent(GenericEvent):
-    "Classe che definisce l'event detector per la palla fuori"
+    "Class that defines the event detector for the ball out"
     def __init__(self, file, xDimension, yDimension, specialEvents):
         """
         :param file: File contenente una lista di parametri di inizializzazione per il modulo
@@ -958,13 +910,13 @@ class BallOutEvent(GenericEvent):
 
     def recognize(self, data, index):
         """
-        Funzione che identifica se la palla è uscita fuori dal campo durante la finestra temporale
-        In particolare controlla che sia uscita o dalle linee di fondo campo, o dai bordi laterali 
-        e non considera la porta e le zone da cui può avvenire il calcio d'angolo
+       Function that identifies whether the ball left the field during the time window
+        In particular, it checks that it has exited either from the baseline, or from the side edges
+        and does not consider the football goal and the areas from which the corner kick can take place
 
-        :param data: Dataset compatto con dati posizionali e feature
-        :param index: Indice da cui inizia la finestra
-        :return: Un dizionario con l'evento riconosciuto, None in caso non sia stato riconosciuto nulla
+        : param data: Compact dataset with positional data and features
+        : param index: Index from which the window starts
+        : return: A dictionary with the recognized event, None in case nothing has been recognized
         """
         minFieldLine, maxFieldLine = self._fieldLimit()
         minFieldCorner, maxFieldCorner = self._fieldCorner()
@@ -979,11 +931,11 @@ class BallOutEvent(GenericEvent):
         else:
             return [None, index]
 
-        # All'inizio la palla deve essere entro le dimensioni del campo da calcio
+        # At first the ball must be within the size of the football pitch
         if (minFieldLine < startBall.xPosition) and (startBall.xPosition < maxFieldLine) and (minFieldCorner < startBall.yPosition) and (startBall.yPosition < maxFieldCorner):
 
-            # Alla fine (della finestra di osservazione) la palla deve essere fuori dal campo tranne
-            # a) nella zona delle due porte
+            # At the end (of the observation window) the ball must be off the pitch except
+            # a) in the area of ​​the two doors
             if (endBall.xPosition < 0 - 0.1 or endBall.xPosition > maxFieldLine + 0.1) and (endBall.yPosition < minGoalLimit or endBall.yPosition > maxGoalLimit):
                 emit = True
             elif (endBall.xPosition <-5  or endBall.xPosition > maxFieldLine +5):
@@ -991,21 +943,21 @@ class BallOutEvent(GenericEvent):
             elif (endBall.yPosition < 0 - 0.1 or endBall.yPosition > maxFieldCorner + 0.1):
                 emit = True
             else:
-                # Controlla corner inferiore sinistro
+                # Check lower left corner
                 if (endBall.xPosition < 0 and endBall.xPosition > -2 and endBall.yPosition > -2 and endBall.yPosition < 0):
                     emit = False
-                # Controlla corner superiore sinistro
+                # Check upper left corner
                 elif (endBall.xPosition < 0 and endBall.xPosition > -2 and endBall.yPosition < maxFieldCorner+2 and endBall.yPosition > maxFieldCorner):
                     emit = False
-                # Controlla corner inferiore destro
+                # Check lower right corner
                 elif (endBall.xPosition > maxFieldLine and endBall.xPosition < maxFieldLine+2 and endBall.yPosition > -2 and endBall.yPosition < 0):
                     emit = False
-                # Controlla corner superiore destro
+                # Check upper right corner
                 elif (endBall.xPosition > maxFieldLine and endBall.xPosition < maxFieldLine+2 and endBall.yPosition < maxFieldCorner+2 and endBall.yPosition > maxFieldCorner):
                     emit = False
                 
         
-        # la palla è fuori dal campo ma all'altezza delle porte (dietro lo specchio della porta)
+        # the ball is off the pitch but at the doors (behind the door mirror)
         elif (startBall.xPosition < 0 or startBall.xPosition > maxFieldLine) and (startBall.yPosition > minGoalLimit and startBall.yPosition < maxGoalLimit):
             if (endBall.xPosition <-5  or endBall.xPosition > maxFieldLine +5):
                 emit = True
@@ -1015,19 +967,19 @@ class BallOutEvent(GenericEvent):
         if emit == True:
             ballOutFrame = int(startBall.timestamp + self.windowSize)
             # print("Emitting BallOut at frame", str(ballOutFrame))
-            
-            # Controllo che il BallOut non sia successivo ad un evento speciale
-            # ossia un fuorigioco, un fallo, o un rigore
 
-            # Per ogni lista di eventi
+            # Check that the BallOut is not after a special event
+            # that is, an offside, a foul, or a penalty
+
+            # For each list of events
             for lst in self.specialEvents:
                 for event in lst:
 
                     #frame BallOut -> 28951
                     #frame Penalty -> 28928
 
-                    # Controllo che il momento di BallOut sia successivo a "event"
-                    # entro un certo range (il range di osservazione)
+                    # Check that the BallOut moment is after "event"
+                    # within a certain range (the observation range)
                     frame = event[0]
                     #print("Checking Offside... Frame", str(frame))
                     # Il frame corrente (index) è successivo al momento di evento speciale
@@ -1042,20 +994,19 @@ class BallOutEvent(GenericEvent):
 
 
             output = self._setEvent(startBall, index, startBall)
-            # Sposto la finestra di una lunghezza pari allo stride
-            # (lo stride corrisponde alla finestra di osservazione, stride = windowsSize)
+
             index += self.stride
             return [output, int(index)]
         else:
             return [None, int(index)]
     def _fieldLimit(self):
         """
-        Estrae la posizione del fondo campo, da modificare nel caso si decidano sistemi di riferimento diversi ()
+        Extracts the headland position, to be modified if different reference systems are decided ()
         """
         return [0, self.xDimension]
     def _fieldCorner(self):
         """
-        Estrae la posizione dei lati del campo, da modificare nel caso si decidano sistemi di riferimento diversi ()
+        Extracts the position of the sides of the field, to be modified if different reference systems are decided ()
         """
         return [0, self.yDimension]
     def _goalLimit(self):
@@ -1070,10 +1021,10 @@ class BallOutEvent(GenericEvent):
         self.windowSize = list[0]
 
 class GoalEvent(GenericEvent):
-    "Classe che definisce l'event detector per il goal"
+    "Class that defines the event detector for the goal"
     def __init__(self, file, xDimension, yDimension):
         """
-        :param file: File contenente una lista di parametri di inizializzazione per il modulo
+        :param file: File containing a list of initialization parameters for the module
         """
         self.name = "Goal"
         self.version = "1.0"
@@ -1085,11 +1036,11 @@ class GoalEvent(GenericEvent):
 
     def recognize(self, data, index):
         """
-        Funzione che identifica se la palla è entrata nell'area della porta
+       Function that identifies whether the ball has entered the goal area
 
-        :param data: Dataset compatto con dati posizionali e feature
-        :param index: Indice da cui inizia la finestra
-        :return: Un dizionario con l'evento riconosciuto, None in caso non sia stato riconosciuto nulla
+        : param data: Compact dataset with positional data and features
+        : param index: Index from which the window starts
+        : return: A dictionary with the recognized event, None in case nothing has been recognized
         """
         minFieldLine, maxFieldLine = self._fieldLimit()
         minGoalLimit, maxGoalLimit = self._goalLimit()
@@ -1113,7 +1064,7 @@ class GoalEvent(GenericEvent):
         return [output, int(index)]
     def _fieldLimit(self):
         """
-        Estrae la posizione del fondo campo, da modificare nel caso si decidano sistemi di riferimento diversi ()
+        Extracts the headland position, to be modified if different reference systems are decided ()
         """
         return [0, self.xDimension]
     def _goalLimit(self):
@@ -1131,11 +1082,11 @@ class XML():
     @staticmethod
     def createEventXML(eventList, filename):
         """
-        Crea un file xml a partire da una lista di dizionari contenenti gli eventi
+       Create an xml file from a list of dictionaries containing events
 
-        :param data: Struttura dati da cui creare il file JSON
-        :param filename: Stringa con il percorso al file JSON
-        :return:
+        : param data: Data structure from which to create the JSON file
+        : param filename: String with the path to the JSON file
+        : Return:
         """
         id = 0
         annotations = ET.Element('annotations')
@@ -1168,7 +1119,7 @@ class XML():
         
     @staticmethod
     def getHalfTimeFrame(filename):
-        "Estrae il frame di inizio del secondo tempo da Annotations_Atomic_Manual.xml"
+        "Extract second half start frame from Annotations_Atomic_Manual.xml"
         result = 54000000
         tree = ET.parse(filename)
         annotations = tree.getroot()
@@ -1224,7 +1175,7 @@ class XML():
 
     @staticmethod
     def getSpecialEvents(filename):
-        "Estrae i frame per goal, falli e punizioni da Annotations_Atomic_Manual.xml"
+        "Extract frames for goals, fouls and punishments from Annotations_Atomic_Manual.xml"
         offsides = []
         fouls = []
         penalties = []
@@ -1316,7 +1267,7 @@ class XML():
             
 #detector
 class Detector():
-    "Classe che esegue l'event detection"
+    "Class that performs the event detection"
     def __init__(self, dataPath, eventPath, detectPath, xDimension, yDimension, samplRate, maxSize,
                  isFirstHalf = True, annotationFile = 'annotation.xml', permutation = 0, 
                  featurePath = "feature.json", dataset=[]):
@@ -1335,19 +1286,19 @@ class Detector():
         self.detectors = [BallDeflectionEvent(detectPath,self.GOALKEEPER0,self.GOALKEEPER1), KickEvent(detectPath),
                           TackleEvent(detectPath), PossessionEvent(detectPath,self.halfTimeFrame,self.GOALKEEPER0,self.GOALKEEPER1)]
 
-        # stampo gli id dei portieri
+        # I print the ids of the goalkeepers
         print("idGoalkeeper0", self.GOALKEEPER0, "idGoalkeeper1", self.GOALKEEPER1)
-        
-        # permuta i detector a partire dal valore intero passato, decommentare per attivarla
-        #self._permutateFromInteger(permutation)
+
+        # exchange the detectors starting from the past integer value, uncomment to activate it
+        # Self._permutateFromInteger (permutation)
         self.detectors.insert(0, BallOutEvent(detectPath, xDimension, yDimension, self.specialEvents))
-        
-        # riconoscimento del goal, non ancora perfetto, decommentare per testare
-        #self.detectors.insert(0, GoalEvent(detectPath, xDimension, yDimension))
+
+        # exchange the detectors starting from the past integer value, uncomment to activate it
+        # Self._permutateFromInteger (permutation)
         self.dataset = dataset
         self.eventList = []
     def startDetection(self):
-        "Funzione che esegue l'event detection per un solo tempo della partita"
+        "Function that performs the event detection for a single time of the game"
         pars = LineHalfParser()
         extr = FeatureExtractor(self.samplRate, self.xDimension, self.yDimension, self.isFirstHalf)
 
@@ -1383,7 +1334,7 @@ class Detector():
         print("Processing ended")
 
     def startFullTimeDetection(self):
-        "Funzione che esegue l'event detection per un'intera partita"
+        "Function that performs event detection for an entire game"
         pars = LinePandaParser()
         extrFirst = FeatureExtractor(self.samplRate, self.xDimension, self.yDimension, True)
         extrSecond = FeatureExtractor(self.samplRate, self.xDimension, self.yDimension, False)
@@ -1444,7 +1395,7 @@ class Detector():
         print('Detection processing ended in {} seconds\n'.format(round(elapsedAll,1)))
     
     def startDetectionFromFeature(self):
-        "Funzione che esegue l'event detection a partire dalle feature"
+        "Function that performs event detection for an entire game"
         pars = LinePandaParser()
         extrFirst = FeatureExtractor(self.samplRate, self.xDimension, self.yDimension, True)
         extrSecond = FeatureExtractor(self.samplRate, self.xDimension, self.yDimension, False)
@@ -1488,7 +1439,7 @@ class Detector():
             else:
                 print('Creating XML')
                 start = time()
-                # attivare il postprocessing al posto della sostituzione dei goal quando si vuole individuarli con l'event detector
+                # activate postprocessing instead of replacing goals when you want to identify them with the event detector
                 self._sobstituteGoal()
                 #self._postProcessing()
                 XML.createEventXML(self.eventList, self.eventPath)
@@ -1498,7 +1449,7 @@ class Detector():
         print('Detection processing ended in {} seconds\n'.format(round(elapsedAll,1)))
 
     def startPreExtraction(self):
-        "Funzione che estrae le feature dai dati posizionali e li inserisce in un dataset"
+        "Function that extracts features from positional data and places them in a dataset"
         pars = LinePandaParser()
         extrFirst = FeatureExtractor(self.samplRate, self.xDimension, self.yDimension, True)
         extrSecond = FeatureExtractor(self.samplRate, self.xDimension, self.yDimension, False)
@@ -1543,7 +1494,7 @@ class Detector():
         print('Extraction processing ended in {} seconds\n'.format(round(elapsedAll,1)))
 
     def extractAndCompact(self):
-        "Estrae e compatta il dataset"
+        "Extract and compact the dataset"
         pars = LinePandaParser()
         extrFirst = FeatureExtractor(self.samplRate, self.xDimension, self.yDimension, True)
         extrSecond = FeatureExtractor(self.samplRate, self.xDimension, self.yDimension, False)
@@ -1585,7 +1536,7 @@ class Detector():
         # print('Feature parsing processing ended in {} seconds\n'.format(round(elapsedAll,1)))
 
     def startPostDetection(self):
-        "Funzione che esegue l'event detection a partire da feature già in memoria"
+        "Function that performs the event detection starting from features already in memory"
         extrFirst = FeatureExtractor(self.samplRate, self.xDimension, self.yDimension, True)
         extrSecond = FeatureExtractor(self.samplRate, self.xDimension, self.yDimension, False)
 
@@ -1610,10 +1561,9 @@ class Detector():
             #else:
                 # print('Compacting events')
                 # start = time()
-                # attivare il postprocessing al posto della sostituzione dei goal quando si vuole individuarli con l'event detector
                 self._sobstituteGoal()
                 #self._postProcessing()
-                # crea l'XML di output, linea da cancellare per risparmiare tempo
+
                 #XML.createEventXML(self.eventList, self.eventPath)
                 # elapsed = time() - start
                 # print('Elapsed {} seconds\n'.format(round(elapsed,1)))
@@ -1622,7 +1572,7 @@ class Detector():
         # print('Detection processing ended in {} seconds\n'.format(round(elapsedAll,1)))
 
     def _sobstituteGoal(self):
-        "Inserisce i dati arbitrali agli eventi rilevati (goal, falli e punizioni)"
+        "Insert the arbitration data to the detected events (goals, fouls and punishments)"
         i,j,q = [0,0,0]
         goals, fouls, penalties = XML.getRefereeEvents(self.annotationFile)
         for k in range(len(self.eventList)+len(goals)+len(fouls)+len(penalties)):
@@ -1707,7 +1657,7 @@ class Detector():
                 break
 
     def _postProcessing(self):
-        "Post processing da usare per individuare i goal"
+        "Post processing to be used to identify goals"
         for i in range(len(self.eventList)):
             if(i >= len(self.eventList)-1):
                 break
@@ -1735,11 +1685,11 @@ class Detector():
 
     def _detectEvent(self):
         """
-        Funzione per rilevare gli eventi
+        function to detect events
 
-        :param data: Dataset compatto con dati posizionali e feature
-        :param detectors: Lista contenente tutti gli event detector che si vogliono applicare a ciascun istante temporale
-        :return: Una lista con tutti gli eventi rilevati
+        : param data: Compact dataset with positional data and features
+        : param detectors: List containing all the event detectors that you want to apply at each instant of time
+        : return: A list with all detected events
         """
         i = 0
         while (i < len(self.dataset)) :
@@ -1761,9 +1711,9 @@ class Detector():
             self.detectors[i], self.detectors[i+digit] = self.detectors[i+digit], self.detectors[i]
     def createFeatureFile(self, overwrite=False):
         """
-        Crea un file con l'elenco degli eventi con le feature estratte
-        :param overwrite: Boleano che indica se sovrascrivere il file o meno
-        :return:
+       Create a file with the list of events with the features extracted
+        : param overwrite: Bolean that indicates whether to overwrite the file or not
+        : Return:
         """
         if isfile(self.featurePath) and not overwrite:
             fstring = 'a'
