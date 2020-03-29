@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 
 # CONST VALUE(s)
-POSITIONS_INPUT_FILE = "positions_2.log"
+POSITIONS_INPUT_FILE = "positions.log"
 CPU_PARALLELISM_MAX = 12
 
 class Read(Thread):

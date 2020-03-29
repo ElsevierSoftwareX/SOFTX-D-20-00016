@@ -1,31 +1,27 @@
 #No Multithreading
-import sys
-import math
-import json
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import argparse
+import math
 import os.path as PATH
+import threading
 import xml.dom.minidom as DOM
 import xml.etree.ElementTree as ET
-import itertools
-import threading
-import pandas
-from time import time
-from collections import namedtuple
-from os.path import isfile
-from dataclasses import dataclass
 from itertools import chain
 from operator import attrgetter
-from multiprocessing import Pool, Array, Manager
-from multiprocessing.dummy import Pool as ThreadPool
-from decimal import Decimal, ROUND_DOWN
+from os.path import isfile
+from time import time
+
+import pandas
+from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 
 
 @dataclass_json
 @dataclass
 class PlayerData:
-    "Struttura dati contenente i dati posizionali e le feature del giocatore"
-    timestamp : float
+    #Data structure containing positional data and player features
+    timestamp: float
     playerID : int
     xPosition : float
     yPosition : float
@@ -951,6 +947,7 @@ class BallOutEvent(GenericEvent):
         """
         self.name = "BallOut"
         self.version = "2.0"
+
         if not(file is None):
             self._readFromFile(file)
             #print('Event: {}\nVersion: {}\nWindow: {}\n'.format(self.name, self.version, self.windowSize))

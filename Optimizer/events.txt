@@ -1,7 +1,7 @@
-KickingTheBall playerId teamId 15
-BallPossession playerId teamId 12
-Tackle playerId teamId 28
-BallDeflection playerId teamId 30
+KickingTheBall playerId teamId 17
+BallPossession playerId teamId 8
+Tackle playerId teamId 23
+BallDeflection playerId teamId 4
 BallOut 500
 Goal team 100
 Foul 50

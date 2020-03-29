@@ -1,13 +1,16 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import sys
 import os
 import math
 import argparse
 import random
 import array
+from os import makedirs
+
 import pandas
 from time import time
 import matplotlib.pyplot as plt
-import networkx
 import numpy
 import pickle
 from Validator.validator import AtomicValidator as AV
@@ -146,7 +149,7 @@ def createDetectorFile(parameterList, outputPath):
     #newParameterList = [int(par) for par in parameterList[:5]]+list(parameterList[5:8])+[parameterList[6]+parameterList[8]]+[parameterList[9]]
     #fileString = "KickingTheBall 1.0 {1} {5:.1f}\nBallPossession 1.0 {2} {6:.1f} {8:.1f}\nTackle 1.0 {2} {6:.1f} {8:.1f}\nBallDeflection 1.0 {3} {7:.1f} {9:.1f}\nBallOut 1.0 {4}".format(*newParameterList)
     newParameterList = [int(par) for par in parameterList[:5]]+list(parameterList[5:9])+[parameterList[6]+parameterList[9],parameterList[7]+parameterList[10]]+list(parameterList[11:])
-    fileString = "KickingTheBall 3.0 {1} {5:.01f} {11:.1f}\nBallPossession 3.0 {2} {6:.01f} {9:.01f} {12:.1f}\nTackle 3.0 {3} {7:.01f} {10:.01f} {13:.1f}\nBallDeflection 3.0 {4} {8:.01f} {14:.1f} {15:.1f} 50.0\nBallOut 1.0 50\nGoal 1.0 50".format(*newParameterList)
+    fileString = "KickingTheBall 3.0 {1} {5:.01f} {11:.1f}\nBallPossession 3.0 {2} {6:.01f} {9:.01f} {12:.1f}\nTackle 3.0 {3} {7:.01f} {10:.01f} {13:.1f}\nBallDeflection 3.0 {4} {8:.01f} {14:.1f} {15:.1f} 50.0\nBallOut 2.0 50\nGoal 1.0 50".format(*newParameterList)
     with open(outputPath, 'w') as f:
             f.write(fileString)
     return fileString.split('\n')
@@ -189,12 +192,12 @@ def testAllMatch(individuals, datasetPath, xDimension, yDimension, samplingRate,
             if (directory != '1st half') and (directory != '2nd half'):
                 # print('Starting processing of folder ' + directory)
                 start = time()
-                #createDetectorFile(individuals[0], detectorsFilename)
+                createDetectorFile(individuals[0], detectorsFilename)
                 featurePath = datasetPath + directory + '//' + 'features.log'
                 annotationPath = datasetPath + directory + '//' + 'Annotations_AtomicEvents_Manual.xml'
                 groundPath = datasetPath + directory + '//' + 'Annotations_AtomicEvents.xml'
                 startPars = time()
-                detector = DET('position.log', 'events.log', None, xDimension, yDimension, samplingRate, maxSize,
+                detector = DET('position.log', 'events.log', detectorsFilename, xDimension, yDimension, samplingRate, maxSize,
                                annotationFile=annotationPath, featurePath=featurePath)
                 detector.extractAndCompact()
                 directoryDataset = detector.dataset
@@ -272,12 +275,12 @@ def compareAllMatchOptimized(individuals, datasetPath, xDimension, yDimension, s
             if (directory != '1st half') and (directory != '2nd half'):
                 # print('Starting processing of folder ' + directory)
                 start = time()
-                #createDetectorFile(individuals[0], detectorsFilename)
+                createDetectorFile(individuals[0], detectorsFilename)
                 featurePath = datasetPath + directory + '//' + 'features.log'
                 annotationPath = datasetPath + directory + '//' + 'Annotations_AtomicEvents_Manual.xml'
                 groundPath = datasetPath + directory + '//' + 'Annotations_AtomicEvents.xml'
                 startPars = time()
-                detector = DET('position.log', 'events.log', None, xDimension, yDimension, samplingRate, maxSize,
+                detector = DET('position.log', 'events.log', detectorsFilename, xDimension, yDimension, samplingRate, maxSize,
                                annotationFile=annotationPath, featurePath=featurePath)
                 detector.extractAndCompact()
                 directoryDataset = detector.dataset
@@ -333,7 +336,9 @@ def extractSingleMatch(parameters, folderPath):
     positionPath = folderPath + 'positions.log'
     annotationPath = folderPath + 'Annotations_AtomicEvents_Manual.xml'
     featurePath = folderPath + 'features.log'
-    extractor = DET(positionPath, None, None, *parameters, annotationFile=annotationPath, featurePath=featurePath)
+    detectPath = folderPath + 'detectors.txt'
+
+    extractor = DET(positionPath, None, detectPath, *parameters, annotationFile=annotationPath, featurePath=featurePath)
     extractor.startPreExtraction()
 
 def rebound(ind, elementsRange):
@@ -583,6 +588,8 @@ def main():
     mutProbability = args.mutationProbability
     seed = args.seed
     finalOutput = args.finalOutput
+    if os.path.exists("Result"):
+        makedirs("Result")
     if not(os.path.isdir(datasetPath)):
         raise Exception("No directory with such name found!")
     if (args.mode == 'FEATURE'):
