@@ -19,10 +19,23 @@ This repository contains:
 
 
 # Dataset
-The generated dataset is accessible to "".
+The generated dataset is available at: <link here>
 
-If you make use of these datasets in your research, please consider citing the papers mentioned above.
+If you make use of these datasets in your research, please cite our paper:
+
+Morra Lia, Manigrasso Francesco, Canto Giuseppe, Gianfrate Claudio, Guarino Enrico, Lamberti Fabrizio, 
+"Slicing and dicing soccer: automatic detection of complex events from spatio-temporal data", 
+Proc. 17th International Conference on Image Analysis and Recognition (ICIAR 2020). 
+
+@inproceedings{
+title={ Slicing and dicing soccer: automatic detection of complex events from spatio-temporal data},
+  author={Morra, Lia and Manigrasso, Francesco and Canto, Giuseppe and Gianfrate, Claudio and Guarino, Enrico and Lamberti, Fabrizio},
+  booktitle={Proc. 17th International Conference on Image Analysis and Recognition (ICIAR 2020)},
+  year={2020},
+  publisher={Springer}
+}
+
+
 
 # Contributors & Maintainers
-Thanks to contributors: Lia Morra, Francesco Manigrasso, Giuseppe Canto,Claudio Gianfrate, Enrico GuarinoB , 
-and FabrizioLamberti
+Lia Morra, Francesco Manigrasso, Giuseppe Canto, Claudio Gianfrate, Enrico Guarino, and Fabrizio Lamberti
