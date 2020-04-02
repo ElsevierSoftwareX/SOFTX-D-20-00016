@@ -1,20 +1,20 @@
 # Slicing and dicing soccer
 
 
-This project presents code for detecting a wide range of complex events in soccer videos starting from
-positional data, which were introduced with the paper "Slicing and dicing soccer".
-A synthetic dataset from opensource Game Football engine has been generated.
-Starting  from  the  opensource  Gameplay  Football  game [https://github.com/BazkieBumpercar/GameplayFootball] 
-a syntetic dataset has been generated including 
-all the most common events such as goals, fouls, corners, penalty kicks,etc.
+This project presents code for detecting a wide range of complex events in soccer videos starting from positional data, which were introduced with the paper "Slicing and dicing soccer".
+
+The detector can be trained and tested on synthetic positional data extracted from the Game Football engine.  We include in this repository our implementation, which is adapted from the original implementation by , 
+which is available here: http://properlydecent.com/data/gameplayfootball/. 
+
+The game engine is very similar but we modified the code to extract spatio-temporal information about the players and the ball, as well as annotations from a wide range of common and not-so-common events including goals, fouls, passes, crosses, shots, saved shorts, and so forth. 
 
 # Repository Overview
 This repository contains:
 
-1. EventDetector Atomic (with Genetic Optimizer)
+1. EventDetector Atomic (with Genetic Optimizer and Evaluation code)
 2. EventDetector Complex
-3. Visualization System
-4. Gameplay Football
+3. Visualization System (to visualize annotated and detected events super-imposed on the video)
+4. Gameplay Football 
 5. Minor utilities
 
 
