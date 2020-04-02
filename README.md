@@ -3,7 +3,7 @@
 
 This project presents code for detecting a wide range of complex events in soccer videos starting from positional data, which were introduced with the paper "Slicing and dicing soccer".
 
-The detector can be trained and tested on synthetic positional data extracted from the Game Football engine.  We include in this repository our implementation, which is adapted from the original implementation by , 
+The detector can be trained and tested on synthetic positional data extracted from the Game Football engine.  We include in this repository our implementation, which is adapted from the original implementation by Bastiaan Konings Schuiling, 
 which is available here: http://properlydecent.com/data/gameplayfootball/. 
 
 The game engine is very similar but we modified the code to extract spatio-temporal information about the players and the ball, as well as annotations from a wide range of common and not-so-common events including goals, fouls, passes, crosses, shots, saved shorts, and so forth. 
