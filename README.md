@@ -20,6 +20,7 @@ This repository contains:
 
 # Dataset
 The generated dataset is available online: https://www.dropbox.com/sh/m1x3zi30q63lscq/AAA4iow3CjnR_yG3QuZiDimza
+A description of the dataset, how it is structured and the content of each file is available in the file SoccER_DatasetDescription.pdf
 
 If you make use of the dataset in your research, please cite our paper:
 
