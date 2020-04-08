@@ -19,9 +19,9 @@ This repository contains:
 
 
 # Dataset
-The generated dataset is available at: <link here>
+The generated dataset is available online: https://www.dropbox.com/sh/m1x3zi30q63lscq/AAA4iow3CjnR_yG3QuZiDimza
 
-If you make use of these datasets in your research, please cite our paper:
+If you make use of the dataset in your research, please cite our paper:
 
 Morra Lia, Manigrasso Francesco, Canto Giuseppe, Gianfrate Claudio, Guarino Enrico, Lamberti Fabrizio, 
 "Slicing and dicing soccer: automatic detection of complex events from spatio-temporal data", 
