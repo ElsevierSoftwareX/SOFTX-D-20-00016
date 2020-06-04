@@ -25,33 +25,27 @@ A description of the dataset, how it is structured and the content of each file 
 If you make use of the dataset in your research, please cite our paper:
 
 Morra Lia, Manigrasso Francesco, Canto Giuseppe, Gianfrate Claudio, Guarino Enrico, Lamberti Fabrizio, 
-"Slicing and dicing soccer: automatic detection of complex events from spatio-temporal data", 
+["Slicing and dicing soccer: automatic detection of complex events from spatio-temporal data"](https://arxiv.org/pdf/2004.04147.pdf), 
 Proc. 17th International Conference on Image Analysis and Recognition (ICIAR 2020). 
 
-@inproceedings{
 
+```
+@inproceedings{morra2020slicing,
 title={ Slicing and dicing soccer: automatic detection of complex events from spatio-temporal data},
-
   author={Morra, Lia and Manigrasso, Francesco and Canto, Giuseppe and Gianfrate, Claudio and Guarino, Enrico and Lamberti, Fabrizio},
-  
   booktitle={Proc. 17th International Conference on Image Analysis and Recognition (ICIAR 2020)},
-  
   year={2020},
-  
   publisher={Springer}
-  
-}
-
+  }
+```
+```
 @article{morra2020slicing,
-
   title={Slicing and dicing soccer: automatic detection ofcomplex events from spatio-temporal data},
-  
   author={Morra, Lia and Manigrasso, Francesco and Canto, Giuseppe and Gianfrate, Claudio and Guarino, Enrico and Lamberti, Fabrizio},
-  
   journal={arXiv preprint arXiv:2004.04147},
-  
   year={2020}
 }
+```
 
 
 
